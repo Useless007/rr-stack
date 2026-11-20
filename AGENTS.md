@@ -1,0 +1,44 @@
+# Working in this repo
+
+React (React Router, `web/`) + Rust (Axum, `server/`), typed end to end through `openapi.json`.
+
+## Definition of done
+
+- Run `scripts/check.sh` and read its output. Exit 0 is the only "done".
+- Changed how the server serves pages or files? Also run `scripts/smoke.sh`.
+- Do not claim success from "it compiles" or from reading the diff.
+
+## Never edit these by hand
+
+They are generated. `check.sh` fails if they differ from a fresh generation.
+
+- `openapi.json` — from the Rust handlers (`cargo run --bin openapi`)
+- `web/app/api/**` — from `openapi.json` (`cd web && bun run gen`)
+- `server/.sqlx/**` — from the SQL in `query!` macros (`cd server && cargo sqlx prepare -- --all-targets`)
+
+## Where each type comes from
+
+| Layer | Source of truth |
+|---|---|
+| Database | `server/migrations/*.sql` |
+| Wire (JSON) | Rust structs deriving `ToSchema` in `server/src/` |
+| TypeScript | `~/api` only. Never hand-write a type that crosses the wire. |
+
+## Add an endpoint
+
+1. Write the handler with `#[utoipa::path(..., operation_id = "camelCaseName")]` in `server/src/<domain>.rs`.
+2. Register it in `api_router()` in `server/src/lib.rs` with `routes!`.
+3. Add an integration test in `server/tests/` (`#[sqlx::test]` gives a fresh database).
+4. `cd web && bun run gen`, then use the generated `<name>Options()` / `<name>Mutation()` from `~/api/@tanstack/react-query.gen`.
+5. New SQL? `cargo sqlx prepare -- --all-targets` and commit `.sqlx/`.
+
+## Rules
+
+- Validate at the boundary with a newtype (see `TodoTitle`): parse once, trust the type inside.
+  `#[schema(max_length = ...)]` only documents; it does not enforce.
+- No `unwrap`/`expect` outside tests (clippy denies it). Return `AppError`.
+- Keep Rust plain: no custom macros, no generic abstraction layers. A human must be able to
+  debug it when you get stuck.
+- New public page that search engines must see? Add its path to `prerender` in
+  `web/react-router.config.ts`. Everything else is SPA.
+- New migration: a new numbered file. Never edit one that is committed.
