@@ -26,6 +26,8 @@ fi
 
 step "typecheck"
 (cd "$root/web" && bun run typecheck >/dev/null)
+step "web build (prerendered pages render)"
+(cd "$root/web" && bun run build >/dev/null)
 
 if [ -n "${DATABASE_URL:-}" ]; then
   command -v sqlx >/dev/null || { echo "sqlx-cli missing: cargo install sqlx-cli --no-default-features --features postgres,rustls" >&2; exit 1; }
@@ -34,8 +36,11 @@ if [ -n "${DATABASE_URL:-}" ]; then
   cargo sqlx prepare --check -- --all-targets
   step "tests"
   cargo test -q
+elif [ "${SKIP_DB:-}" = 1 ]; then
+  echo "SKIP_DB=1: skipped .sqlx check and tests. This is NOT done."
 else
-  echo "DATABASE_URL not set: skipped .sqlx check and tests"
+  echo "DATABASE_URL is not set: start the DB (docker compose up -d --wait) or set SKIP_DB=1 for a partial check" >&2
+  exit 1
 fi
 if [ -d "$root/cli" ]; then
   step "cli tests"

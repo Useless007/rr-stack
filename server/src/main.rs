@@ -5,6 +5,8 @@ use server::{AppState, app};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
+    // `cargo run` from server/ picks up the repo-root .env; real env vars still win.
+    dotenvy::from_filename("../.env").ok();
     let database_url = std::env::var("DATABASE_URL").map_err(|_| "DATABASE_URL is not set")?;
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".into());
     let web_dist =
