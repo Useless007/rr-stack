@@ -6,10 +6,10 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 : "${DATABASE_URL:?DATABASE_URL must be set (cp .env.example .env)}"
 
 (cd "$root/web" && bun run build >/dev/null 2>&1)
-(cd "$root/server" && cargo build -q --bin rr-server)
+(cd "$root/server" && cargo build -q --bin server)
 
 port="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')"
-PORT="$port" WEB_DIST="$root/web/build/client" "$root/server/target/debug/rr-server" >/dev/null 2>&1 &
+PORT="$port" WEB_DIST="$root/web/build/client" "$root/server/target/debug/server" >/dev/null 2>&1 &
 pid=$!
 trap 'kill "$pid" 2>/dev/null || true' EXIT
 base="http://127.0.0.1:$port"
