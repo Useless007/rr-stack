@@ -9,6 +9,7 @@ use axum::routing::any;
 use axum::{Json, Router};
 use serde_json::{Value, json};
 use sqlx::PgPool;
+use tower_http::services::{ServeDir, ServeFile};
 use utoipa::openapi::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -30,12 +31,21 @@ pub fn openapi() -> OpenApi {
     api_router().split_for_parts().1
 }
 
-pub fn app(state: AppState, _web_dist: Option<PathBuf>) -> Router {
+/// `web_dist` is the React Router `build/client` dir; `None` serves the API only (tests).
+pub fn app(state: AppState, web_dist: Option<PathBuf>) -> Router {
     let (router, _) = api_router().split_for_parts();
-    router
+    let router = router
         .route("/api", any(json_404))
         .route("/api/{*rest}", any(json_404))
-        .with_state(state)
+        .with_state(state);
+    match web_dist {
+        // Prerendered pages are real files; any other path gets the SPA shell so deep links work.
+        Some(dir) => {
+            let spa = ServeFile::new(dir.join("__spa-fallback.html"));
+            router.fallback_service(ServeDir::new(dir).fallback(spa))
+        }
+        None => router,
+    }
 }
 
 /// Errors a handler can return; logged server-side, never leaked to the client.
