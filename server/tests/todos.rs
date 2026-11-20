@@ -71,8 +71,13 @@ async fn rejects_201_chars(db: PgPool) {
 
 #[sqlx::test]
 async fn unknown_api_path_is_json_404(db: PgPool) {
-    let res = send(&db, Request::get("/api/nope").body(Body::empty()).unwrap()).await;
-    assert_eq!(res.status(), StatusCode::NOT_FOUND);
-    let ct = res.headers()[header::CONTENT_TYPE].to_str().unwrap();
-    assert!(ct.starts_with("application/json"), "content-type {ct}");
+    for path in ["/api", "/api/", "/api/nope"] {
+        let res = send(&db, Request::get(path).body(Body::empty()).unwrap()).await;
+        assert_eq!(res.status(), StatusCode::NOT_FOUND, "{path}");
+        let ct = res.headers()[header::CONTENT_TYPE].to_str().unwrap();
+        assert!(
+            ct.starts_with("application/json"),
+            "{path} content-type {ct}"
+        );
+    }
 }

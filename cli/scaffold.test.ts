@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { scaffold, validateName } from "./scaffold";
+import { dbPort, scaffold, validateName } from "./scaffold";
 
 const repoRoot = resolve(import.meta.dir, "..");
 const freshDir = () => join(mkdtempSync(join(tmpdir(), "rr-cli-")), "out");
@@ -38,5 +38,34 @@ describe("scaffold", () => {
     await expect(scaffold({ name: "demo", dest, source: repoRoot })).rejects.toThrow(/not empty/);
     expect(readFileSync(join(dest, "keep.txt"), "utf8")).toBe("mine");
     expect(existsSync(join(dest, "server"))).toBeFalse();
+  });
+
+  test("copies only files git tracks, so local junk and secrets stay behind", async () => {
+    const clone = join(mkdtempSync(join(tmpdir(), "rr-src-")), "src");
+    Bun.spawnSync(["git", "clone", "-q", repoRoot, clone]);
+    writeFileSync(join(clone, ".env.local"), "SECRET=1");
+    mkdirSync(join(clone, ".codegraph"));
+    writeFileSync(join(clone, ".codegraph/index"), "x");
+    const dest = freshDir();
+    await scaffold({ name: "demo", dest, source: clone });
+    expect(existsSync(join(dest, ".env.local"))).toBeFalse();
+    expect(existsSync(join(dest, ".codegraph"))).toBeFalse();
+    expect(existsSync(join(dest, "server/src/lib.rs"))).toBeTrue();
+  });
+
+  test("gives each project its own database name and port", async () => {
+    const dest = freshDir();
+    await scaffold({ name: "my-app", dest, source: repoRoot });
+    const port = dbPort("my-app");
+    expect(port).toBeGreaterThanOrEqual(54000);
+    expect(port).toBeLessThan(55000);
+    const compose = readFileSync(join(dest, "compose.yml"), "utf8");
+    expect(compose).toContain("POSTGRES_DB: my_app");
+    expect(compose).toContain(`127.0.0.1:${port}:5432`);
+    expect(compose).not.toContain(": rr\n");
+    const env = readFileSync(join(dest, ".env"), "utf8");
+    expect(env).toContain(`postgres://my_app:my_app@localhost:${port}/my_app`);
+    expect(dbPort("my-app")).toBe(port);
+    expect(dbPort("other")).not.toBe(port);
   });
 });

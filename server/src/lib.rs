@@ -36,6 +36,7 @@ pub fn app(state: AppState, web_dist: Option<PathBuf>) -> Router {
     let (router, _) = api_router().split_for_parts();
     let router = router
         .route("/api", any(json_404))
+        .route("/api/", any(json_404))
         .route("/api/{*rest}", any(json_404))
         .with_state(state);
     match web_dist {
