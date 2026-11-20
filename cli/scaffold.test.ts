@@ -2,10 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { dbPort, scaffold, validateName } from "./scaffold";
+import { buildTemplate, dbPort, scaffold, validateName } from "./scaffold";
 
 const repoRoot = resolve(import.meta.dir, "..");
 const freshDir = () => join(mkdtempSync(join(tmpdir(), "rr-cli-")), "out");
+// What the npm package ships: the CLI copies from this, never from a git checkout.
+const template = freshDir();
+await buildTemplate(repoRoot, template);
 
 describe("validateName", () => {
   test("accepts lowercase names with dashes", () => {
@@ -19,7 +22,7 @@ describe("validateName", () => {
 describe("scaffold", () => {
   test("copies the template under the new name", async () => {
     const dest = freshDir();
-    await scaffold({ name: "demo", dest, source: repoRoot });
+    await scaffold({ name: "demo", dest, source: template });
     expect(readFileSync(join(dest, "server/Cargo.toml"), "utf8")).toContain('name = "demo-server"');
     expect(JSON.parse(readFileSync(join(dest, "web/package.json"), "utf8")).name).toBe("demo-web");
     expect(existsSync(join(dest, ".env"))).toBeTrue();
@@ -35,27 +38,45 @@ describe("scaffold", () => {
   test("refuses a non-empty destination and leaves it untouched", async () => {
     const dest = freshDir();
     await Bun.write(join(dest, "keep.txt"), "mine");
-    await expect(scaffold({ name: "demo", dest, source: repoRoot })).rejects.toThrow(/not empty/);
+    await expect(scaffold({ name: "demo", dest, source: template })).rejects.toThrow(/not empty/);
     expect(readFileSync(join(dest, "keep.txt"), "utf8")).toBe("mine");
     expect(existsSync(join(dest, "server"))).toBeFalse();
   });
 
-  test("copies only files git tracks, so local junk and secrets stay behind", async () => {
+  test("template holds only files git tracks, so local junk and secrets stay behind", async () => {
     const clone = join(mkdtempSync(join(tmpdir(), "rr-src-")), "src");
     Bun.spawnSync(["git", "clone", "-q", repoRoot, clone]);
     writeFileSync(join(clone, ".env.local"), "SECRET=1");
     mkdirSync(join(clone, ".codegraph"));
     writeFileSync(join(clone, ".codegraph/index"), "x");
+    const out = freshDir();
+    await buildTemplate(clone, out);
+    expect(existsSync(join(out, ".env.local"))).toBeFalse();
+    expect(existsSync(join(out, ".codegraph"))).toBeFalse();
+    expect(existsSync(join(out, "cli"))).toBeFalse();
+  });
+
+  test("survives npm dropping .gitignore files from the package", async () => {
+    expect(existsSync(join(template, ".gitignore"))).toBeFalse();
+    expect(existsSync(join(template, "_gitignore"))).toBeTrue();
     const dest = freshDir();
-    await scaffold({ name: "demo", dest, source: clone });
-    expect(existsSync(join(dest, ".env.local"))).toBeFalse();
-    expect(existsSync(join(dest, ".codegraph"))).toBeFalse();
-    expect(existsSync(join(dest, "server/src/lib.rs"))).toBeTrue();
+    await scaffold({ name: "demo", dest, source: template });
+    expect(readFileSync(join(dest, ".gitignore"), "utf8")).toContain(".env");
+    expect(existsSync(join(dest, "web/.gitignore"))).toBeTrue();
+    expect(existsSync(join(dest, "_gitignore"))).toBeFalse();
+  });
+
+  test("renames the package in Cargo.lock so cargo build --locked works", async () => {
+    const dest = freshDir();
+    await scaffold({ name: "demo", dest, source: template });
+    const lock = readFileSync(join(dest, "server/Cargo.lock"), "utf8");
+    expect(lock).toContain('name = "demo-server"');
+    expect(lock).not.toContain('name = "rr-server"');
   });
 
   test("gives each project its own database name and port", async () => {
     const dest = freshDir();
-    await scaffold({ name: "my-app", dest, source: repoRoot });
+    await scaffold({ name: "my-app", dest, source: template });
     const port = dbPort("my-app");
     expect(port).toBeGreaterThanOrEqual(54000);
     expect(port).toBeLessThan(55000);
