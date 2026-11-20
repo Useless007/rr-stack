@@ -1,8 +1,36 @@
 {
   "name": "create-rr-stack",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
-  "bin": { "create-rr-stack": "index.ts" },
-  "scripts": { "test": "bun test" }
+  "bin": {
+    "create-rr-stack": "index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "prepack": "rm -rf template && bun -e \"await (await import('./scaffold.ts')).buildTemplate('..', 'template')\" && cp ../LICENSE LICENSE",
+    "postpack": "rm -rf template LICENSE"
+  },
+  "description": "Scaffold a React Router + Rust (Axum) app that is typed from the database to the screen.",
+  "license": "MIT",
+  "keywords": [
+    "create",
+    "react",
+    "rust",
+    "axum",
+    "react-router",
+    "openapi",
+    "typesafe",
+    "bun"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Useless007/rr-stack.git",
+    "directory": "cli"
+  },
+  "homepage": "https://github.com/Useless007/rr-stack#readme",
+  "files": [
+    "index.ts",
+    "scaffold.ts",
+    "template"
+  ]
 }

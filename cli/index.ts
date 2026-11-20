@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
-// shortcut: copies the template from this checkout (the CLI's parent dir); publishing to npm needs the template bundled into the package.
-import { resolve } from "node:path";
-import { scaffold, validateName } from "./scaffold";
+import { existsSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { buildTemplate, scaffold, validateName } from "./scaffold";
 
 const args = process.argv.slice(2);
 const flags = new Set(args.filter((a) => a.startsWith("--")));
@@ -15,7 +16,13 @@ if (problem) {
 
 const dest = resolve(process.cwd(), name);
 try {
-  await scaffold({ name, dest, source: resolve(import.meta.dir, "..") });
+  // The npm package ships template/ (built by prepack); a git checkout builds it on the fly.
+  let source = join(import.meta.dir, "template");
+  if (!existsSync(source)) {
+    source = join(mkdtempSync(join(tmpdir(), "rr-template-")), "t");
+    await buildTemplate(resolve(import.meta.dir, ".."), source);
+  }
+  await scaffold({ name, dest, source });
 } catch (err) {
   console.error(`create-rr-stack: ${(err as Error).message}`);
   process.exit(1);
@@ -23,7 +30,10 @@ try {
 
 const run = (cmd: string[], cwd: string) => {
   const { exitCode } = Bun.spawnSync(cmd, { cwd, stdout: "inherit", stderr: "inherit" });
-  if (exitCode !== 0) throw new Error(`${cmd.join(" ")} failed in ${cwd}`);
+  if (exitCode !== 0) {
+    console.error(`create-rr-stack: \`${cmd.join(" ")}\` failed in ${cwd}. The project is created; rerun that command there.`);
+    process.exit(1);
+  }
 };
 if (!flags.has("--no-install")) run(["bun", "install"], resolve(dest, "web"));
 if (!flags.has("--no-git")) run(["git", "init", "-q", "-b", "main"], dest);
@@ -34,4 +44,5 @@ Created ${name}. Next:
   docker compose up -d --wait
   (cd server && sqlx migrate run)
   scripts/check.sh
+  (cd server && cargo run) & (cd web && bun run dev)
 Then read AGENTS.md before you (or your agent) write code.`);

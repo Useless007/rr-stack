@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { copyFile, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 /** Returns null when the name is usable as a directory, Cargo package and npm package; else why not. */
@@ -21,22 +21,38 @@ export function dbPort(name: string): number {
 
 // Tracked in the template repo but not part of a new project.
 const SKIP_TOP = new Set(["cli", "docs"]);
+// npm never ships files named .gitignore, so the template stores them under this name.
+const GITIGNORE = "_gitignore";
+
+/** Writes the project template (only files git tracks in `repo`) into `out`, ready to ship in the npm package. */
+export async function buildTemplate(repo: string, out: string): Promise<void> {
+  const files = execFileSync("git", ["ls-files", "-z"], { cwd: repo, encoding: "utf8" })
+    .split("\0")
+    .filter((f) => f && !SKIP_TOP.has(f.split("/")[0] ?? "") && existsSync(join(repo, f)));
+  for (const file of files) {
+    const target = join(out, file.replace(/(^|\/)\.gitignore$/, `$1${GITIGNORE}`));
+    await mkdir(dirname(target), { recursive: true });
+    await copyFile(join(repo, file), target);
+  }
+}
 
 export async function scaffold(opts: { name: string; dest: string; source: string }): Promise<void> {
   const { name, dest, source } = opts;
   const existing = await readdir(dest).catch(() => []);
   if (existing.length > 0) throw new Error(`${dest} is not empty`);
 
-  // Only what git tracks: untracked caches, local env files and build output can never leak.
-  const files = execFileSync("git", ["ls-files", "-z"], { cwd: source, encoding: "utf8" })
-    .split("\0")
-    .filter((f) => f && !SKIP_TOP.has(f.split("/")[0] ?? "") && existsSync(join(source, f)));
-  for (const file of files) {
-    await mkdir(dirname(join(dest, file)), { recursive: true });
-    await copyFile(join(source, file), join(dest, file));
+  for (const file of await readdir(source, { recursive: true, withFileTypes: true })) {
+    if (!file.isFile()) continue;
+    const from = join(file.parentPath, file.name);
+    const to = join(dest, from.slice(source.length + 1));
+    await mkdir(dirname(to), { recursive: true });
+    await copyFile(from, to);
+    if (file.name === GITIGNORE) await rename(to, join(dirname(to), ".gitignore"));
   }
 
-  await edit(join(dest, "server/Cargo.toml"), (s) => s.replace(/^name = ".*"$/m, `name = "${name}-server"`));
+  const crate = `name = "${name}-server"`;
+  await edit(join(dest, "server/Cargo.toml"), (s) => must(s, ['name = "rr-server"']).replace('name = "rr-server"', crate));
+  await edit(join(dest, "server/Cargo.lock"), (s) => must(s, ['name = "rr-server"']).replace('name = "rr-server"', crate));
   await edit(join(dest, "web/package.json"), (s) => {
     const pkg = JSON.parse(s);
     pkg.name = `${name}-web`;

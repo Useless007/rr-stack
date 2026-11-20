@@ -10,13 +10,13 @@ if `scripts/check.sh` passes, the SQL, the Rust API, the OpenAPI contract and th
 ## New project
 
 ```bash
-bun path/to/rr-stack/cli/index.ts my-app     # --no-install, --no-git to skip those steps
+bun create rr-stack my-app        # add --no-install or --no-git to skip those steps
 ```
 
-It copies only the files git tracks (never `.env`, caches or build output), skips `cli/` and
-`docs/`, renames the Cargo and npm packages to `my-app-server` / `my-app-web`, gives the project its
+`bun create rr-stack` runs the `create-rr-stack` package. It copies the template (only files git
+tracks), renames the Cargo and npm packages to `my-app-server` / `my-app-web`, gives the project its
 own Postgres database name and host port (54000-54999), writes `.env`, runs `bun install` and
-`git init`. Not on npm yet, so `bun create rr-stack` does not work.
+`git init`.
 
 ## Quick start
 
