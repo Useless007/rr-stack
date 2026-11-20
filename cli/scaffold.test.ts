@@ -89,4 +89,12 @@ describe("scaffold", () => {
     expect(dbPort("my-app")).toBe(port);
     expect(dbPort("other")).not.toBe(port);
   });
+
+  test("titles the README with the project name", async () => {
+    const dest = freshDir();
+    await scaffold({ name: "my-app", dest, source: template });
+    const readme = readFileSync(join(dest, "README.md"), "utf8");
+    expect(readme.split("\n")[0]).toBe("# my-app");
+    expect(readme).toContain("bun create rr-stack");
+  });
 });
