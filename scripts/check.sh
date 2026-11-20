@@ -37,4 +37,8 @@ if [ -n "${DATABASE_URL:-}" ]; then
 else
   echo "DATABASE_URL not set: skipped .sqlx check and tests"
 fi
+if [ -d "$root/cli" ]; then
+  step "cli tests"
+  (cd "$root/cli" && bun test 2>&1 | tail -3)
+fi
 echo; echo "check OK"

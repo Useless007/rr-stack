@@ -3,8 +3,8 @@
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
-use rr_server::{AppState, app, openapi};
 use serde_json::{Value, json};
+use server::{AppState, app, openapi};
 use sqlx::PgPool;
 use tower::ServiceExt;
 

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use rr_server::{AppState, app};
+use server::{AppState, app};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

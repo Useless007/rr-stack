@@ -3,6 +3,14 @@ name = "rr-server"
 version = "0.1.0"
 edition = "2024"
 
+# The lib and binary are always called `server`, so renaming the package (create-rr-stack does) never touches code.
+[lib]
+name = "server"
+
+[[bin]]
+name = "server"
+path = "src/main.rs"
+
 [dependencies]
 axum = "0.8.9"
 chrono = { version = "0.4.45", default-features = false, features = ["std", "clock", "serde"] }
