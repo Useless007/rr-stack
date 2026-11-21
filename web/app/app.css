@@ -1,15 +1,44 @@
 @import "tailwindcss";
+@import "@fontsource-variable/ibm-plex-sans";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-sans: "IBM Plex Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* Ink and patina: the green of oxidised copper, the rust that is not orange. */
+  --color-ink: #0e1a2b;
+  --color-ink-soft: #1b2a40;
+  --color-paper: #eef2f6;
+  --color-mist: #8a9bb0;
+  --color-patina: #3fb6a8;
+  --color-patina-deep: #1d7f74;
+  --color-signal: #f2b33d;
+  --color-fault: #e5636b;
 }
 
 html,
 body {
-  @apply bg-white dark:bg-gray-950;
+  @apply bg-paper text-ink dark:bg-ink dark:text-paper;
+  font-feature-settings: "ss02";
+}
 
-  @media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark) {
+  html {
     color-scheme: dark;
+  }
+}
+
+:focus-visible {
+  @apply outline-2 outline-offset-2 outline-patina;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }

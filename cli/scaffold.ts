@@ -54,6 +54,11 @@ export async function scaffold(opts: { name: string; dest: string; source: strin
   await edit(join(dest, "server/Cargo.toml"), (s) => must(s, ['name = "rr-server"']).replace('name = "rr-server"', crate));
   await edit(join(dest, "server/Cargo.lock"), (s) => must(s, ['name = "rr-server"']).replace('name = "rr-server"', crate));
   await edit(join(dest, "README.md"), (s) => must(s, ["# RR stack\n"]).replace("# RR stack\n", `# ${name}\n`));
+  await edit(join(dest, "package.json"), (s) => {
+    const pkg = JSON.parse(s);
+    pkg.name = name;
+    return `${JSON.stringify(pkg, null, 2)}\n`;
+  });
   await edit(join(dest, "web/package.json"), (s) => {
     const pkg = JSON.parse(s);
     pkg.name = `${name}-web`;

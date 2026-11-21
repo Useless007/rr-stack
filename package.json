@@ -1,0 +1,11 @@
+{
+  "name": "rr-stack",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun scripts/dev.ts",
+    "check": "bun scripts/check.ts",
+    "smoke": "bun scripts/smoke.ts",
+    "gen": "bun scripts/gen.ts"
+  }
+}
