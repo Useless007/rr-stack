@@ -9,6 +9,10 @@ use crate::AppState;
 use crate::todos::Todo;
 
 /// Pushed to every client connected to `GET /api/events` (WebSocket) when a todo changes.
+///
+/// The channel is public because reading todos is public. If you make data private to its owner,
+/// filter events per user here and check the `Origin` header in `events()`, or every visitor (and
+/// any other website) will receive everyone's changes.
 #[derive(Clone, Serialize, ToSchema)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum TodoEvent {

@@ -34,8 +34,9 @@ will need:
 | `/how-it-works` | prerendered; the layers and how a change travels through them |
 | `/api-reference` | prerendered from `openapi.json` at build time, no API call |
 | `/app` | dashboard: an aggregate SQL query (`GET /api/stats`) |
-| `/app/todos` | list with filters and search in the URL (query params), create, optimistic toggle, delete |
+| `/app/todos` | list with filters and search in the URL (query params), create, optimistic toggle, delete, live updates over a WebSocket |
 | `/app/todos/:id` | path params, edit, typed 404 from the API |
+| `/sign-in` | register and sign in: Argon2id, HttpOnly session cookie, owner-only edits (403) |
 | any other path | the app's 404 page |
 
 In production it is one process. Axum serves `/api/*` and the built pages. There is no Node at
@@ -91,6 +92,8 @@ output says that the result is not done.
 server/src/lib.rs        api_router(): every route is registered here (spec + runtime)
 server/src/todos.rs      example domain: TodoTitle validates input at the boundary
 server/src/error.rs      ApiError: the JSON body of every 4xx/5xx, part of the contract
+server/src/auth.rs       sign-in: Argon2id, sessions, the CurrentUser extractor
+server/src/events.rs     WebSocket /api/events: typed realtime events
 server/migrations/       database schema (source of truth for tables)
 server/tests/            integration tests, each gets a fresh database (#[sqlx::test])
 web/app/routes.ts        page routes
@@ -120,13 +123,13 @@ the API while building.
 ## Production
 
 The `Dockerfile` builds one image with the server and the pages. Run it with `DATABASE_URL` set;
-it serves on port 3000 and runs migrations on startup. Without Docker: `bun run build` in `web/`,
+it serves on port 3000 and runs migrations on startup. Behind HTTPS, set `COOKIE_SECURE=true`. Without Docker: `bun run build` in `web/`,
 `cargo build --release` in `server/`, then run `server/target/release/server` (`server.exe` on
 Windows) with `WEB_DIST` pointing at `web/build/client`.
 
 ## Not included yet
 
-Auth, file uploads, server-side rendering (`ssr: true`), deploy recipes.
+File uploads, server-side rendering (`ssr: true`), deploy recipes.
 
 ## License
 

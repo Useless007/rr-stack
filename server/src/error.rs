@@ -9,7 +9,8 @@ use utoipa::ToSchema;
 /// The body of every 4xx/5xx the API returns, so clients get a typed error instead of plain text.
 #[derive(Serialize, ToSchema)]
 pub struct ApiError {
-    /// Stable machine-readable code: `bad_request`, `not_found`, `method_not_allowed`, `validation`, `internal`.
+    /// Stable machine-readable code: `bad_request`, `unauthorized`, `forbidden`, `not_found`,
+    /// `method_not_allowed`, `conflict`, `validation`, `internal`.
     pub error: String,
     /// Human-readable explanation, safe to show to a user.
     pub message: String,
@@ -19,6 +20,11 @@ pub enum AppError {
     BadRequest(String),
     NotFound(&'static str),
     MethodNotAllowed,
+    Unauthorized,
+    BadCredentials,
+    Forbidden,
+    Conflict(&'static str),
+    Internal(&'static str),
     Validation(String),
     Db(sqlx::Error),
 }
@@ -64,6 +70,30 @@ impl IntoResponse for AppError {
                 "method_not_allowed",
                 "this path does not accept that method".to_owned(),
             ),
+            Self::Unauthorized => (
+                StatusCode::UNAUTHORIZED,
+                "unauthorized",
+                "sign in first".to_owned(),
+            ),
+            Self::BadCredentials => (
+                StatusCode::UNAUTHORIZED,
+                "unauthorized",
+                "wrong email or password".to_owned(),
+            ),
+            Self::Forbidden => (
+                StatusCode::FORBIDDEN,
+                "forbidden",
+                "only the owner can change this".to_owned(),
+            ),
+            Self::Conflict(m) => (StatusCode::CONFLICT, "conflict", m.to_owned()),
+            Self::Internal(what) => {
+                tracing::error!(what, "internal error");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal",
+                    "internal error".to_owned(),
+                )
+            }
             Self::Validation(m) => (StatusCode::UNPROCESSABLE_ENTITY, "validation", m),
             Self::Db(err) => {
                 tracing::error!(%err, "database error");

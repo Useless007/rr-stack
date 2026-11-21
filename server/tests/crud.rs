@@ -1,33 +1,31 @@
 #![allow(clippy::unwrap_used)] // integration-test helpers sit outside #[test] fns, which allow-unwrap-in-tests does not cover
 
-use axum::body::Body;
-use axum::http::{Method, Request, StatusCode, header};
-use axum::response::Response;
-use http_body_util::BodyExt;
-use serde_json::{Value, json};
-use server::{AppState, app};
-use sqlx::PgPool;
-use tower::ServiceExt;
+mod common;
 
+use axum::http::{Method, StatusCode};
+use serde_json::{Value, json};
+use sqlx::PgPool;
+
+/// Every request here is made by one signed-in user, so writes are allowed.
 async fn call(db: &PgPool, method: Method, uri: &str, body: Option<Value>) -> (StatusCode, Value) {
-    let req = Request::builder().method(method).uri(uri);
-    let req = match body {
-        Some(b) => req
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(b.to_string())),
-        None => req.body(Body::empty()),
-    }
-    .unwrap();
-    let res: Response = app(AppState::new(db.clone()), None)
-        .oneshot(req)
-        .await
-        .unwrap();
-    let status = res.status();
-    let bytes = res.into_body().collect().await.unwrap().to_bytes();
-    (
-        status,
-        serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+    let cookie = session(db).await;
+    let res = common::call(db, method, uri, body, Some(&cookie)).await;
+    (res.status, res.body)
+}
+
+async fn session(db: &PgPool) -> String {
+    let res = common::call(
+        db,
+        Method::POST,
+        "/api/auth/login",
+        Some(json!({ "email": "t@example.com", "password": "correct horse battery" })),
+        None,
     )
+    .await;
+    match res.set_cookie {
+        Some(c) => common::cookie_pair(&c),
+        None => common::sign_up(db, "t@example.com").await,
+    }
 }
 
 async fn create(db: &PgPool, title: &str) -> i64 {

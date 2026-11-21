@@ -9,7 +9,8 @@ export type ClientOptions = {
  */
 export type ApiError = {
     /**
-     * Stable machine-readable code: `bad_request`, `not_found`, `method_not_allowed`, `validation`, `internal`.
+     * Stable machine-readable code: `bad_request`, `unauthorized`, `forbidden`, `not_found`,
+     * `method_not_allowed`, `conflict`, `validation`, `internal`.
      */
     error: string;
     /**
@@ -18,6 +19,16 @@ export type ApiError = {
     message: string;
 };
 
+export type Credentials = {
+    email: Email;
+    password: Password;
+};
+
+/**
+ * An email address that is trimmed, lowercased and shaped like `local@domain.tld`.
+ */
+export type Email = string;
+
 export type Health = {
     status: string;
 };
@@ -25,6 +36,11 @@ export type Health = {
 export type NewTodo = {
     title: TodoTitle;
 };
+
+/**
+ * 8 to 128 characters. Never serialised, never logged.
+ */
+export type Password = string;
 
 export type Stats = {
     done: number;
@@ -36,11 +52,19 @@ export type Todo = {
     created_at: string;
     done: boolean;
     id: number;
+    /**
+     * The user who created it. `null` for todos made before sign-in existed; nobody can change those.
+     */
+    owner_id?: number | null;
     title: string;
 };
 
 /**
  * Pushed to every client connected to `GET /api/events` (WebSocket) when a todo changes.
+ *
+ * The channel is public because reading todos is public. If you make data private to its owner,
+ * filter events per user here and check the `Origin` header in `events()`, or every visitor (and
+ * any other website) will receive everyone's changes.
  */
 export type TodoEvent = {
     todo: Todo;
@@ -65,6 +89,101 @@ export type TodoPatch = {
  * A title that is already trimmed and 1..=200 characters; it cannot be built any other way.
  */
 export type TodoTitle = string;
+
+export type User = {
+    email: string;
+    id: number;
+};
+
+export type LoginData = {
+    body: Credentials;
+    path?: never;
+    query?: never;
+    url: '/api/auth/login';
+};
+
+export type LoginErrors = {
+    401: ApiError;
+    422: ApiError;
+};
+
+export type LoginError = LoginErrors[keyof LoginErrors];
+
+export type LoginResponses = {
+    /**
+     * Signed in: sets the rr_session cookie
+     */
+    200: User;
+};
+
+export type LoginResponse = LoginResponses[keyof LoginResponses];
+
+export type LogoutData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/auth/logout';
+};
+
+export type LogoutErrors = {
+    /**
+     * Sent from another site
+     */
+    403: ApiError;
+};
+
+export type LogoutError = LogoutErrors[keyof LogoutErrors];
+
+export type LogoutResponses = {
+    /**
+     * Session ended and cookie cleared
+     */
+    204: void;
+};
+
+export type LogoutResponse = LogoutResponses[keyof LogoutResponses];
+
+export type MeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/auth/me';
+};
+
+export type MeErrors = {
+    401: ApiError;
+};
+
+export type MeError = MeErrors[keyof MeErrors];
+
+export type MeResponses = {
+    200: User;
+};
+
+export type MeResponse = MeResponses[keyof MeResponses];
+
+export type RegisterData = {
+    body: Credentials;
+    path?: never;
+    query?: never;
+    url: '/api/auth/register';
+};
+
+export type RegisterErrors = {
+    409: ApiError;
+    422: ApiError;
+};
+
+export type RegisterError = RegisterErrors[keyof RegisterErrors];
+
+export type RegisterResponses = {
+    /**
+     * Signed in: sets the rr_session cookie
+     */
+    201: User;
+};
+
+export type RegisterResponse = RegisterResponses[keyof RegisterResponses];
 
 export type HealthData = {
     body?: never;
@@ -128,6 +247,7 @@ export type CreateTodoData = {
 };
 
 export type CreateTodoErrors = {
+    401: ApiError;
     422: ApiError;
 };
 
@@ -149,6 +269,8 @@ export type DeleteTodoData = {
 };
 
 export type DeleteTodoErrors = {
+    401: ApiError;
+    403: ApiError;
     404: ApiError;
 };
 
@@ -192,6 +314,8 @@ export type UpdateTodoData = {
 };
 
 export type UpdateTodoErrors = {
+    401: ApiError;
+    403: ApiError;
     404: ApiError;
     422: ApiError;
 };

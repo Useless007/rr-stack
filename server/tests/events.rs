@@ -1,5 +1,7 @@
 #![allow(clippy::unwrap_used)] // integration-test helpers sit outside #[test] fns, which allow-unwrap-in-tests does not cover
 
+mod common;
+
 use axum::body::Body;
 use axum::http::{Request, header};
 use futures_util::StreamExt;
@@ -22,8 +24,10 @@ async fn changes_are_broadcast_to_websocket_clients(db: PgPool) {
         .await
         .unwrap();
 
+    let cookie = common::sign_up(&state.db, "live@example.com").await;
     let req = Request::post("/api/todos")
         .header(header::CONTENT_TYPE, "application/json")
+        .header(header::COOKIE, cookie)
         .body(Body::from(json!({ "title": "live" }).to_string()))
         .unwrap();
     app(state.clone(), None).oneshot(req).await.unwrap();

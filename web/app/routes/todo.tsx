@@ -3,12 +3,14 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import type { ApiError } from "~/api";
 import { deleteTodoMutation, getTodoOptions, updateTodoMutation } from "~/api/@tanstack/react-query.gen";
+import { useSession } from "~/components/session";
 import { errorMessage, formatDate } from "~/lib/errors";
 
 export default function TodoDetail() {
   const id = Number(useParams().id);  // a non-number id reaches the API and comes back as a typed 400
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useSession();
   const todo = useQuery({ ...getTodoOptions({ path: { id } }), retry: false });
   const [draft, setDraft] = useState<string | null>(null);
   const save = useMutation({
@@ -41,6 +43,7 @@ export default function TodoDetail() {
   }
 
   const t = todo.data;
+  const mine = !!user && t.owner_id === user.id;
   return (
     <div className="mt-10 max-w-xl">
       {back}
@@ -55,8 +58,8 @@ export default function TodoDetail() {
           Title
         </label>
         <div className="mt-2 flex gap-2">
-          <input id="title" className="field flex-1" value={draft ?? t.title} onChange={(e) => setDraft(e.target.value)} />
-          <button className="btn" type="submit" disabled={draft === null || save.isPending}>
+          <input id="title" className="field flex-1" value={draft ?? t.title} readOnly={!mine} onChange={(e) => setDraft(e.target.value)} />
+          <button className="btn" type="submit" disabled={!mine || draft === null || save.isPending}>
             {save.isPending ? "Saving" : "Save"}
           </button>
         </div>
@@ -75,6 +78,7 @@ export default function TodoDetail() {
               type="checkbox"
               className="size-4 accent-patina-deep dark:accent-patina"
               checked={t.done}
+              disabled={!mine}
               onChange={() => toggle.mutate({ path: { id }, body: { done: !t.done } })}
             />
             {t.done ? "Done" : "Open"}
@@ -90,6 +94,12 @@ export default function TodoDetail() {
         </dd>
       </dl>
 
+      {!mine && (
+        <p className="muted mt-8 text-sm">
+          {user ? "Only the person who added this todo can change it." : "Sign in to change your own todos."}
+        </p>
+      )}
+      {mine && (
       <button
         type="button"
         className="mt-10 text-sm text-fault-deep underline underline-offset-4 dark:text-fault"
@@ -98,6 +108,7 @@ export default function TodoDetail() {
       >
         Delete this todo
       </button>
+      )}
       {[toggle.error, remove.error].map(
         (error, i) =>
           error && (

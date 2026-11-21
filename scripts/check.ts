@@ -29,6 +29,8 @@ try {
   rmSync(tmp, { recursive: true, force: true });
 }
 
+step("web tests");
+await run($`${bun} run test`.cwd(webDir));
 step("typecheck");
 await run($`${bun} run typecheck`.cwd(webDir), true);
 step("web build (prerendered pages render)");

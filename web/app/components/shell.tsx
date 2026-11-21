@@ -1,4 +1,5 @@
-import { NavLink, Link } from "react-router";
+import { Link, NavLink } from "react-router";
+import { useSession, useSignOut } from "./session";
 import type { ReactNode } from "react";
 
 export function Wordmark() {
@@ -14,6 +15,29 @@ const nav = [
   { to: "/api-reference", label: "API" },
   { to: "/app", label: "Playground" },
 ];
+
+function Account() {
+  const { user, loading } = useSession();
+  const signOut = useSignOut();
+  if (loading) return null;
+  if (!user) {
+    return (
+      <NavLink to="/sign-in" className="muted -my-2 py-2 hover:text-ink dark:hover:text-paper">
+        Sign in
+      </NavLink>
+    );
+  }
+  return (
+    <span className="inline-flex items-baseline gap-3">
+      <span className="muted max-w-40 truncate" title={user.email}>
+        {user.email}
+      </span>
+      <button type="button" className="-my-2 py-2 underline decoration-patina underline-offset-4" onClick={() => signOut.mutate({})}>
+        Sign out
+      </button>
+    </span>
+  );
+}
 
 export function Shell({ children }: { children: ReactNode }) {
   return (
@@ -35,6 +59,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <a className="muted -my-2 py-2 hover:text-ink dark:hover:text-paper" href="https://github.com/Useless007/rr-stack">
             GitHub
           </a>
+          <Account />
         </nav>
       </header>
       <main>{children}</main>

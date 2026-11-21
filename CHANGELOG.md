@@ -5,6 +5,9 @@ with; existing projects are not updated.
 
 ## 0.3.0 (unreleased)
 
+- Sign-in: register, login, logout and `me`, with Argon2id password hashes and an HttpOnly,
+  SameSite=Lax session cookie whose token is stored only as a SHA-256 hash. `CurrentUser` extractor
+  for handlers. Todos have an owner; only the owner can change or delete them (403 otherwise).
 - Realtime: `GET /api/events` (WebSocket) pushes a typed `TodoEvent` on every change; the
   playground updates across tabs and shows a Live badge. The event type is in the contract.
 - Repo: issue and PR templates, Dependabot, security policy, this changelog.

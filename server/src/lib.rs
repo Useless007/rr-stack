@@ -1,3 +1,4 @@
+mod auth;
 mod error;
 mod events;
 mod health;
@@ -45,7 +46,11 @@ pub fn api_router() -> OpenApiRouter<AppState> {
             todos::update_todo,
             todos::delete_todo
         ))
-        .routes(routes!(todos::get_stats));
+        .routes(routes!(todos::get_stats))
+        .routes(routes!(auth::register))
+        .routes(routes!(auth::login))
+        .routes(routes!(auth::logout))
+        .routes(routes!(auth::me));
     OpenApiRouter::with_openapi(<ExtraSchemas as utoipa::OpenApi>::openapi()).nest("/api", api)
 }
 
@@ -63,14 +68,32 @@ pub fn app(state: AppState, web_dist: Option<PathBuf>) -> Router {
         .route("/api/{*rest}", any(json_404))
         .method_not_allowed_fallback(|| async { AppError::MethodNotAllowed })
         .with_state(state);
-    match web_dist {
+    let router = match web_dist {
         // Prerendered pages are real files; any other path gets the SPA shell so deep links work.
         Some(dir) => {
             let spa = ServeFile::new(dir.join("__spa-fallback.html"));
             router.fallback_service(ServeDir::new(dir).fallback(spa))
         }
         None => router,
-    }
+    };
+    security_headers(router)
+}
+
+/// Headers every response gets: no MIME sniffing, no framing (clickjacking), no full-URL referrers.
+fn security_headers(router: Router) -> Router {
+    use axum::http::{HeaderName, HeaderValue};
+    use tower_http::set_header::SetResponseHeaderLayer;
+    let headers = [
+        ("x-content-type-options", "nosniff"),
+        ("x-frame-options", "DENY"),
+        ("referrer-policy", "strict-origin-when-cross-origin"),
+    ];
+    headers.into_iter().fold(router, |router, (name, value)| {
+        router.layer(SetResponseHeaderLayer::if_not_present(
+            HeaderName::from_static(name),
+            HeaderValue::from_static(value),
+        ))
+    })
 }
 
 async fn json_404() -> AppError {

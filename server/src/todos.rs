@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::AppState;
+use crate::auth::CurrentUser;
 use crate::error::{ApiError, AppError, AppJson, AppPath, AppQuery};
 use crate::events::TodoEvent;
 
@@ -44,6 +45,8 @@ pub struct Todo {
     pub id: i64,
     pub title: String,
     pub done: bool,
+    /// The user who created it. `null` for todos made before sign-in existed; nobody can change those.
+    pub owner_id: Option<i64>,
     #[schema(format = DateTime)]
     pub created_at: String,
 }
@@ -77,6 +80,7 @@ struct TodoRow {
     id: i64,
     title: String,
     done: bool,
+    owner_id: Option<i64>,
     created_at: DateTime<Utc>,
 }
 
@@ -86,6 +90,7 @@ impl From<TodoRow> for Todo {
             id: row.id,
             title: row.title,
             done: row.done,
+            owner_id: row.owner_id,
             created_at: row.created_at.to_rfc3339(),
         }
     }
@@ -114,7 +119,7 @@ pub async fn list_todos(
     // strpos instead of LIKE, so % and _ in the search text are matched literally.
     let rows = sqlx::query_as!(
         TodoRow,
-        r#"SELECT id, title, done, created_at FROM todos
+        r#"SELECT id, title, done, owner_id, created_at FROM todos
            WHERE ($1::bool IS NULL OR done = $1)
              AND ($2::text IS NULL OR strpos(lower(title), lower($2)) > 0)
            ORDER BY created_at DESC, id DESC"#,
@@ -139,7 +144,7 @@ pub async fn get_todo(
 ) -> Result<AppJson<Todo>, AppError> {
     let row = sqlx::query_as!(
         TodoRow,
-        "SELECT id, title, done, created_at FROM todos WHERE id = $1",
+        "SELECT id, title, done, owner_id, created_at FROM todos WHERE id = $1",
         id
     )
     .fetch_optional(&state.db)
@@ -153,16 +158,22 @@ pub async fn get_todo(
     path = "/todos",
     operation_id = "createTodo",
     request_body = NewTodo,
-    responses((status = CREATED, body = Todo), (status = UNPROCESSABLE_ENTITY, body = ApiError))
+    responses(
+        (status = CREATED, body = Todo),
+        (status = UNAUTHORIZED, body = ApiError),
+        (status = UNPROCESSABLE_ENTITY, body = ApiError),
+    )
 )]
 pub async fn create_todo(
     State(state): State<AppState>,
+    CurrentUser(user): CurrentUser,
     AppJson(new): AppJson<NewTodo>,
 ) -> Result<(StatusCode, AppJson<Todo>), AppError> {
     let row = sqlx::query_as!(
         TodoRow,
-        "INSERT INTO todos (title) VALUES ($1) RETURNING id, title, done, created_at",
-        new.title.0
+        "INSERT INTO todos (title, owner_id) VALUES ($1, $2) RETURNING id, title, done, owner_id, created_at",
+        new.title.0,
+        user.id
     )
     .fetch_one(&state.db)
     .await?;
@@ -180,26 +191,32 @@ pub async fn create_todo(
     request_body = TodoPatch,
     responses(
         (status = OK, body = Todo),
+        (status = UNAUTHORIZED, body = ApiError),
+        (status = FORBIDDEN, body = ApiError),
         (status = NOT_FOUND, body = ApiError),
         (status = UNPROCESSABLE_ENTITY, body = ApiError),
     )
 )]
 pub async fn update_todo(
     State(state): State<AppState>,
+    CurrentUser(user): CurrentUser,
     AppPath(id): AppPath<i64>,
     AppJson(patch): AppJson<TodoPatch>,
 ) -> Result<AppJson<Todo>, AppError> {
     let row = sqlx::query_as!(
         TodoRow,
         r#"UPDATE todos SET title = COALESCE($2, title), done = COALESCE($3, done)
-           WHERE id = $1 RETURNING id, title, done, created_at"#,
+           WHERE id = $1 AND owner_id = $4 RETURNING id, title, done, owner_id, created_at"#,
         id,
         patch.title.map(|t| t.0),
-        patch.done
+        patch.done,
+        user.id
     )
     .fetch_optional(&state.db)
-    .await?
-    .ok_or(AppError::NotFound("todo"))?;
+    .await?;
+    let Some(row) = row else {
+        return Err(not_owned_or_missing(&state, id).await);
+    };
     let todo = Todo::from(row);
     let _ = state.events.send(TodoEvent::Updated { todo: todo.clone() });
     Ok(AppJson(todo))
@@ -210,18 +227,28 @@ pub async fn update_todo(
     path = "/todos/{id}",
     operation_id = "deleteTodo",
     params(("id" = i64, Path)),
-    responses((status = NO_CONTENT), (status = NOT_FOUND, body = ApiError))
+    responses(
+        (status = NO_CONTENT),
+        (status = UNAUTHORIZED, body = ApiError),
+        (status = FORBIDDEN, body = ApiError),
+        (status = NOT_FOUND, body = ApiError),
+    )
 )]
 pub async fn delete_todo(
     State(state): State<AppState>,
+    CurrentUser(user): CurrentUser,
     AppPath(id): AppPath<i64>,
 ) -> Result<StatusCode, AppError> {
-    let deleted = sqlx::query!("DELETE FROM todos WHERE id = $1", id)
-        .execute(&state.db)
-        .await?
-        .rows_affected();
+    let deleted = sqlx::query!(
+        "DELETE FROM todos WHERE id = $1 AND owner_id = $2",
+        id,
+        user.id
+    )
+    .execute(&state.db)
+    .await?
+    .rows_affected();
     if deleted == 0 {
-        return Err(AppError::NotFound("todo"));
+        return Err(not_owned_or_missing(&state, id).await);
     }
     let _ = state.events.send(TodoEvent::Deleted { id });
     Ok(StatusCode::NO_CONTENT)
@@ -239,4 +266,16 @@ pub async fn get_stats(State(state): State<AppState>) -> Result<AppJson<Stats>, 
     .fetch_one(&state.db)
     .await?;
     Ok(AppJson(stats))
+}
+
+/// A write matched no row: tell "not yours" (403) apart from "does not exist" (404).
+async fn not_owned_or_missing(state: &AppState, id: i64) -> AppError {
+    match sqlx::query_scalar!("SELECT EXISTS (SELECT 1 FROM todos WHERE id = $1)", id)
+        .fetch_one(&state.db)
+        .await
+    {
+        Ok(Some(true)) => AppError::Forbidden,
+        Ok(_) => AppError::NotFound("todo"),
+        Err(err) => err.into(),
+    }
 }

@@ -3,8 +3,36 @@
 import { type DefaultError, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { createTodo, deleteTodo, getStats, getTodo, health, listTodos, type Options, updateTodo } from '../sdk.gen';
-import type { CreateTodoData, CreateTodoError, CreateTodoResponse, DeleteTodoData, DeleteTodoError, DeleteTodoResponse, GetStatsData, GetStatsResponse, GetTodoData, GetTodoError, GetTodoResponse, HealthData, HealthResponse, ListTodosData, ListTodosError, ListTodosResponse, UpdateTodoData, UpdateTodoError, UpdateTodoResponse } from '../types.gen';
+import { createTodo, deleteTodo, getStats, getTodo, health, listTodos, login, logout, me, type Options, register, updateTodo } from '../sdk.gen';
+import type { CreateTodoData, CreateTodoError, CreateTodoResponse, DeleteTodoData, DeleteTodoError, DeleteTodoResponse, GetStatsData, GetStatsResponse, GetTodoData, GetTodoError, GetTodoResponse, HealthData, HealthResponse, ListTodosData, ListTodosError, ListTodosResponse, LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse, MeData, MeError, MeResponse, RegisterData, RegisterError, RegisterResponse, UpdateTodoData, UpdateTodoError, UpdateTodoResponse } from '../types.gen';
+
+export const loginMutation = (options?: Partial<Options<LoginData>>): UseMutationOptions<LoginResponse, LoginError, Options<LoginData>> => {
+    const mutationOptions: UseMutationOptions<LoginResponse, LoginError, Options<LoginData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await login({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const logoutMutation = (options?: Partial<Options<LogoutData>>): UseMutationOptions<LogoutResponse, LogoutError, Options<LogoutData>> => {
+    const mutationOptions: UseMutationOptions<LogoutResponse, LogoutError, Options<LogoutData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await logout({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -37,6 +65,35 @@ const createQueryKey = <TOptions extends Options>(id: string, options?: TOptions
         params.query = options.query;
     }
     return [params];
+};
+
+export const meQueryKey = (options?: Options<MeData>) => createQueryKey('me', options);
+
+export const meOptions = (options?: Options<MeData>) => queryOptions<MeResponse, MeError, MeResponse, ReturnType<typeof meQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await me({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: meQueryKey(options)
+});
+
+export const registerMutation = (options?: Partial<Options<RegisterData>>): UseMutationOptions<RegisterResponse, RegisterError, Options<RegisterData>> => {
+    const mutationOptions: UseMutationOptions<RegisterResponse, RegisterError, Options<RegisterData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await register({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
 };
 
 export const healthQueryKey = (options?: Options<HealthData>) => createQueryKey('health', options);

@@ -16,9 +16,11 @@ RUN cargo build --release --locked --bin server
 
 # Same Debian release as the build stage, so the binary's glibc matches.
 FROM debian:bookworm-slim
+RUN useradd --system --no-create-home app
 COPY --from=server /src/server/target/release/server /app/server
 COPY --from=web /src/web/build/client /app/web
 ENV WEB_DIST=/app/web PORT=3000
 EXPOSE 3000
+USER app
 # Migrations are compiled into the binary and run on startup.
 CMD ["/app/server"]

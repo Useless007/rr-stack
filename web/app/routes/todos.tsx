@@ -8,6 +8,7 @@ import {
   listTodosOptions,
   updateTodoMutation,
 } from "~/api/@tanstack/react-query.gen";
+import { useSession } from "~/components/session";
 import { errorMessage, formatDate } from "~/lib/errors";
 
 const tabs = [
@@ -19,6 +20,7 @@ type Status = (typeof tabs)[number]["value"];
 
 export default function Todos() {
   const queryClient = useQueryClient();
+  const { user } = useSession();
   const [params, setParams] = useSearchParams();
   const status: Status = tabs.some((t) => t.value === params.get("status")) ? (params.get("status") as Status) : "all";
   const q = params.get("q") ?? "";
@@ -63,6 +65,15 @@ export default function Todos() {
 
   return (
     <div className="mt-10 max-w-xl">
+      {!user && (
+        <p className="rounded-md border border-ink/15 px-4 py-3 dark:border-paper/15">
+          <Link className="underline decoration-patina underline-offset-4" to="/sign-in?next=/app/todos">
+            Sign in
+          </Link>{" "}
+          to add todos and change your own. Anyone can read the list.
+        </p>
+      )}
+      {user && (
       <form
         className="flex gap-2"
         onSubmit={(e) => {
@@ -84,6 +95,7 @@ export default function Todos() {
           {create.isPending ? "Adding" : "Add todo"}
         </button>
       </form>
+      )}
       {[
         { error: create.error, what: "Not added" },
         { error: toggle.error, what: "Not updated" },
@@ -133,15 +145,19 @@ export default function Todos() {
           </p>
         )}
         {todos.data?.length === 0 && (
-          <p className="muted py-4">{q || status !== "all" ? "Nothing matches this filter." : "No todos yet. Add the first one above."}</p>
+          <p className="muted py-4">{q || status !== "all" ? "Nothing matches this filter." : user ? "No todos yet. Add the first one above." : "No todos yet."}</p>
         )}
         <ul className="divide-y divide-ink/10 dark:divide-paper/10">
-          {todos.data?.map((todo) => (
+          {todos.data?.map((todo) => {
+            const mine = !!user && todo.owner_id === user.id;
+            return (
             <li key={todo.id} className="flex items-center gap-3 py-3.5 leading-relaxed">
               <input
                 type="checkbox"
                 className="size-4 shrink-0 accent-patina-deep dark:accent-patina"
                 checked={todo.done}
+                disabled={!mine}
+                title={mine ? undefined : "Only the person who added it can change it"}
                 aria-label={`Mark "${todo.title}" as ${todo.done ? "open" : "done"}`}
                 onChange={() => toggle.mutate({ path: { id: todo.id }, body: { done: !todo.done } })}
               />
@@ -151,6 +167,7 @@ export default function Todos() {
               <time className="hidden shrink-0 text-xs text-ink/65 sm:block dark:text-paper/60" dateTime={todo.created_at}>
                 {formatDate(todo.created_at)}
               </time>
+              {mine && (
               <button
                 type="button"
                 className="shrink-0 rounded px-2 py-1 text-sm text-ink/65 hover:bg-fault/10 hover:text-fault-deep dark:text-paper/60 dark:hover:text-fault"
@@ -159,8 +176,10 @@ export default function Todos() {
               >
                 Delete
               </button>
+              )}
             </li>
-          ))}
+            );
+          })}
         </ul>
       </section>
     </div>

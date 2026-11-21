@@ -20,6 +20,9 @@ services:
     build: .
     environment:
       DATABASE_URL: postgres://rr:rr@db:5432/rr
+      # Secure cookies work on http://localhost. Set "false" only to reach this over plain HTTP from
+      # another machine (a LAN IP); keep it "true" behind HTTPS.
+      COOKIE_SECURE: "true"
     ports:
       - "127.0.0.1:8000:3000"
     depends_on:

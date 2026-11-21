@@ -53,6 +53,8 @@ and the glue is what this repo is:
 | Serve prerendered pages, a SPA and the API from one binary | Axum with a SPA fallback; deep links are tested |
 | Use the same commands on Windows and Linux | bun scripts, LF line endings, CI on both |
 | Tell an AI agent what "done" means and what not to touch | `AGENTS.md` and one check command |
+| Sign-in that is safe by default | Argon2id hashes, HttpOnly SameSite cookie, hashed session tokens, owner checks in SQL |
+| Push changes to open pages | a WebSocket whose message type is in the contract, so the client is typed |
 | Start everything with one command | `bun run dev`, or `docker compose up -d` |
 
 Each row costs a few hours of docs and trial and error the first time, and is easy to get subtly
@@ -74,8 +76,8 @@ bun run dev              # Postgres in Docker + Rust API + Vite, with hot reload
 ```
 
 A new project is a small working site about the stack: prerendered pages, an API reference built
-from the contract, and a playground with full CRUD, filters, search, optimistic updates and typed
-404/422 errors. Read its `README.md` and `AGENTS.md` for the day-to-day workflow.
+from the contract, sign-in, and a playground with full CRUD, filters, search, optimistic updates,
+live updates over a WebSocket and typed 401/403/404/422 errors. Read its `README.md` and `AGENTS.md` for the day-to-day workflow.
 
 Requirements: Docker. To develop, also Rust (stable), [bun](https://bun.sh), git and
 `cargo install sqlx-cli --no-default-features --features postgres,rustls`.

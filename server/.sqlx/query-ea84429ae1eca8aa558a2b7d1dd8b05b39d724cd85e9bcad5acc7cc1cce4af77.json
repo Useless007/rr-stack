@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, title, done, created_at FROM todos\n           WHERE ($1::bool IS NULL OR done = $1)\n             AND ($2::text IS NULL OR strpos(lower(title), lower($2)) > 0)\n           ORDER BY created_at DESC, id DESC",
+  "query": "UPDATE todos SET title = COALESCE($2, title), done = COALESCE($3, done)\n           WHERE id = $1 AND owner_id = $4 RETURNING id, title, done, owner_id, created_at",
   "describe": {
     "columns": [
       {
@@ -38,6 +38,17 @@
       },
       {
         "ordinal": 3,
+        "name": "owner_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "todos",
+            "name": "owner_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -50,16 +61,19 @@
     ],
     "parameters": {
       "Left": [
+        "Int8",
+        "Text",
         "Bool",
-        "Text"
+        "Int8"
       ]
     },
     "nullable": [
       false,
       false,
       false,
+      true,
       false
     ]
   },
-  "hash": "fbcd26a66b68ad44b58d0874270c532d31b7b3f64b5cca2a3e7358a7bf52b65a"
+  "hash": "ea84429ae1eca8aa558a2b7d1dd8b05b39d724cd85e9bcad5acc7cc1cce4af77"
 }

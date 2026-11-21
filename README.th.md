@@ -53,6 +53,8 @@ repo นี้ทำไว้ให้
 | เสิร์ฟหน้า prerender, SPA และ API จาก binary เดียว | Axum พร้อม SPA fallback มี test เรื่องเปิดลิงก์ตรง |
 | ใช้คำสั่งชุดเดียวกันบน Windows และ Linux | สคริปต์ bun, ขึ้นบรรทัดแบบ LF, CI ทั้งสองระบบ |
 | บอก AI agent ว่า "เสร็จ" คืออะไร และห้ามแตะไฟล์ไหน | `AGENTS.md` และคำสั่งตรวจคำสั่งเดียว |
+| ระบบ login ที่ปลอดภัยตั้งแต่ต้น | hash ด้วย Argon2id, cookie แบบ HttpOnly SameSite, เก็บ session token แบบ hash, ตรวจเจ้าของใน SQL |
+| ส่งการเปลี่ยนแปลงไปยังหน้าที่เปิดอยู่ | WebSocket ที่ชนิดของข้อความอยู่ในสัญญา client จึงมี type |
 | เปิดทุกอย่างด้วยคำสั่งเดียว | `bun run dev` หรือ `docker compose up -d` |
 
 แต่ละแถวกินเวลาอ่าน docs และลองผิดลองถูกหลายชั่วโมงในครั้งแรก และพลาดแบบเนียนๆ ได้ง่าย เช่น client
@@ -73,8 +75,8 @@ bun run dev              # Postgres ใน Docker + Rust API + Vite พร้อ
 ```
 
 โปรเจกต์ใหม่เป็นเว็บเล็กๆ ที่ใช้งานได้จริงเกี่ยวกับ stack นี้ มีหน้าที่ prerender, หน้า API reference
-ที่สร้างจากสัญญา และ playground ที่ทำ CRUD ครบ กรองและค้นหาได้ อัปเดตแบบ optimistic และมี error
-404/422 ที่มี type อ่านขั้นตอนการทำงานประจำวันได้ใน `README.md` และ `AGENTS.md` ของโปรเจกต์
+ที่สร้างจากสัญญา ระบบ sign-in และ playground ที่ทำ CRUD ครบ กรองและค้นหาได้ อัปเดตแบบ optimistic
+อัปเดตสดผ่าน WebSocket และมี error 401/403/404/422 ที่มี type อ่านขั้นตอนการทำงานประจำวันได้ใน `README.md` และ `AGENTS.md` ของโปรเจกต์
 
 สิ่งที่ต้องมี: Docker ถ้าจะพัฒนาต้องมี Rust (stable), [bun](https://bun.sh), git และ
 `cargo install sqlx-cli --no-default-features --features postgres,rustls` เพิ่ม

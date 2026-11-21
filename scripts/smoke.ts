@@ -50,13 +50,27 @@ try {
   await new Promise((ok, no) => ((ws.onopen = ok), (ws.onerror = no)));
   const received = new Promise<string>((ok) => (ws.onmessage = (m) => ok(String(m.data))));
 
-  const json = { "content-type": "application/json" };
+  // Auth: sign up gets an HttpOnly session cookie; writes without it are refused.
+  const plain = { "content-type": "application/json" };
+  await expect("/api/todos", 401, { method: "POST", headers: plain, body: '{"title":"smoke"}' });
+  const email = `smoke-${crypto.randomUUID()}@example.com`;
+  const signUp = await fetch(`${base}/api/auth/register`, {
+    method: "POST",
+    headers: plain,
+    body: JSON.stringify({ email, password: "smoke-test-password" }),
+  });
+  const setCookie = signUp.headers.get("set-cookie") ?? "";
+  if (signUp.status !== 201 || !setCookie.includes("HttpOnly")) fail(`smoke FAIL: register returned ${signUp.status}, cookie "${setCookie}"`);
+  const json = { ...plain, cookie: setCookie.split(";")[0]! };
+  await expect("/api/auth/me", 200, { headers: json });
+
   const todo = JSON.parse((await expect("/api/todos", 201, { method: "POST", headers: json, body: '{"title":"smoke"}' })).body);
   const event = JSON.parse(await Promise.race([received, Bun.sleep(5000).then(() => "{}")]));
   if (event.type !== "created" || event.todo?.id !== todo.id) fail("smoke FAIL: WebSocket /api/events did not deliver the created event");
   ws.close();
   await expect(`/api/todos/${todo.id}`, 200, { method: "PATCH", headers: json, body: '{"done":true}' });
-  await expect(`/api/todos/${todo.id}`, 204, { method: "DELETE" });
+  await expect(`/api/todos/${todo.id}`, 204, { method: "DELETE", headers: json });
+  await expect("/api/auth/logout", 204, { method: "POST", headers: json });
   console.log("smoke OK");
 } finally {
   server.kill();

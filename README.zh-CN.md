@@ -52,6 +52,8 @@ AI agent 引入的大多数 bug，本质上是两层之间不一致：改了列�
 | 用一个二进制同时提供预渲染页面、SPA 和 API | 带 SPA fallback 的 Axum；深层链接有测试 |
 | 在 Windows 和 Linux 上使用同一套命令 | bun 脚本、LF 换行、两个系统都跑 CI |
 | 告诉 AI agent 什么叫"完成"、哪些文件不能动 | `AGENTS.md` 和一条检查命令 |
+| 默认安全的登录 | Argon2id 哈希、HttpOnly SameSite cookie、只存哈希的会话令牌、在 SQL 中检查所有者 |
+| 把变更推送到已打开的页面 | 消息类型写在契约里的 WebSocket，客户端同样有类型 |
 | 一条命令启动全部 | `bun run dev`，或 `docker compose up -d` |
 
 每一行第一次做都要花几个小时查文档、反复试错，而且很容易出现隐蔽的错误：CI 从不重新生成的客户端、
@@ -70,8 +72,8 @@ docker compose up -d     # 运行整个应用，无需安装工具链；CLI 会�
 bun run dev              # Docker 中的 Postgres + Rust API + Vite，支持热更新
 ```
 
-新项目本身就是一个介绍这个技术栈的小网站：预渲染页面、由契约生成的 API 参考，以及一个包含
-完整 CRUD、筛选、搜索、乐观更新和带类型 404/422 错误的 playground。日常工作流程请看项目里的
+新项目本身就是一个介绍这个技术栈的小网站：预渲染页面、由契约生成的 API 参考，登录功能，以及一个包含
+完整 CRUD、筛选、搜索、乐观更新、WebSocket 实时更新和带类型 401/403/404/422 错误的 playground。日常工作流程请看项目里的
 `README.md` 和 `AGENTS.md`。
 
 环境要求：Docker。开发还需要 Rust（stable）、[bun](https://bun.sh)、git，以及

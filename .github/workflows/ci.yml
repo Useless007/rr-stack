@@ -72,4 +72,9 @@ jobs:
           url="http://$(docker compose port app 3000)"
           curl -fsS --retry 30 --retry-all-errors --retry-delay 1 "$url/api/health"
           curl -fsS "$url/" | grep -q "typed from the database to the screen"
-          curl -fsS -X POST -H 'content-type: application/json' -d '{"title":"from docker"}' "$url/api/todos"
+          # The session cookie is Secure; pass it by hand instead of relying on curl's cookie jar over http.
+          session=$(curl -fsS -D - -o /dev/null -X POST -H 'content-type: application/json' \
+            -d '{"email":"ci@example.com","password":"ci-password-123"}' "$url/api/auth/register" \
+            | grep -i '^set-cookie:' | sed -E 's/^[^:]+: *([^;]+).*/\1/' | tr -d '\r')
+          test -n "$session"
+          curl -fsS -H "cookie: $session" -X POST -H 'content-type: application/json' -d '{"title":"from docker"}' "$url/api/todos"

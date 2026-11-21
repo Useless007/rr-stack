@@ -39,6 +39,11 @@ They are generated. `bun run check` fails if they differ from a fresh generation
 - No `unwrap`/`expect` outside tests (clippy denies it). Return `AppError`; it becomes a JSON
   `ApiError` that the generated client types. Use `AppJson`, `AppPath`, `AppQuery` (not axum's
   extractors) so bad input is a typed 400/422 instead of plain text.
+- Need the signed-in user? Add `CurrentUser(user): CurrentUser` to the handler; it answers 401 by
+  itself. Check ownership in the SQL (`WHERE ... AND owner_id = $n`), not after loading the row.
+  Never log or return `password_hash`, and never store a raw session token.
+- Realtime: send a `TodoEvent` (or a new event enum registered in `ExtraSchemas`) on
+  `state.events`; open pages receive it over `/api/events`.
 - Keep Rust plain: no custom macros, no generic abstraction layers. A human must be able to
   debug it when you get stuck.
 - New public page that search engines must see? Add its path to `prerender` in
