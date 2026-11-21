@@ -8,6 +8,10 @@ with; existing projects are not updated.
 - Sign-in: register, login, logout and `me`, with Argon2id password hashes and an HttpOnly,
   SameSite=Lax session cookie whose token is stored only as a SHA-256 hash. `CurrentUser` extractor
   for handlers. Todos have an owner; only the owner can change or delete them (403 otherwise).
+- Hardening: sign-in and sign-up limited to 10 attempts per minute per address (typed 429 with
+  Retry-After; `TRUST_PROXY` for X-Forwarded-For), at most 4 Argon2 hashes at once, cookies Secure
+  by default, cross-site logout refused, security headers, non-root Docker image.
+- Web unit tests (`bun test`) run in `bun run check`.
 - Realtime: `GET /api/events` (WebSocket) pushes a typed `TodoEvent` on every change; the
   playground updates across tabs and shows a Live badge. The event type is in the contract.
 - Repo: issue and PR templates, Dependabot, security policy, this changelog.

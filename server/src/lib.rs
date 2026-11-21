@@ -2,6 +2,7 @@ mod auth;
 mod error;
 mod events;
 mod health;
+mod limit;
 mod todos;
 
 pub use error::AppError;
@@ -20,6 +21,8 @@ use utoipa_axum::routes;
 pub struct AppState {
     pub db: PgPool,
     pub events: tokio::sync::broadcast::Sender<events::TodoEvent>,
+    /// Sign-in and sign-up attempts per client address: 10 per minute.
+    pub sign_in_limit: std::sync::Arc<limit::RateLimiter>,
 }
 
 impl AppState {
@@ -27,6 +30,10 @@ impl AppState {
         Self {
             db,
             events: events::channel(),
+            sign_in_limit: std::sync::Arc::new(limit::RateLimiter::new(
+                10,
+                std::time::Duration::from_secs(60),
+            )),
         }
     }
 }

@@ -123,7 +123,8 @@ the API while building.
 ## Production
 
 The `Dockerfile` builds one image with the server and the pages. Run it with `DATABASE_URL` set;
-it serves on port 3000 and runs migrations on startup. Behind HTTPS, set `COOKIE_SECURE=true`. Without Docker: `bun run build` in `web/`,
+it serves on port 3000 and runs migrations on startup. Session cookies are Secure by default; behind a
+reverse proxy, set `TRUST_PROXY=true` so rate limits see the real client address. Without Docker: `bun run build` in `web/`,
 `cargo build --release` in `server/`, then run `server/target/release/server` (`server.exe` on
 Windows) with `WEB_DIST` pointing at `web/build/client`.
 

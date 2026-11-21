@@ -276,3 +276,35 @@ async fn responses_carry_security_headers(db: PgPool) {
     assert_eq!(h["x-frame-options"], "DENY");
     assert_eq!(h["referrer-policy"], "strict-origin-when-cross-origin");
 }
+
+#[sqlx::test]
+async fn too_many_sign_in_attempts_from_one_address_get_429(db: PgPool) {
+    use axum::extract::ConnectInfo;
+    use tower::ServiceExt;
+    let state = server::AppState::new(db);
+    let attempt = |ip: [u8; 4]| {
+        let mut req = axum::http::Request::post("/api/auth/login")
+            .header(axum::http::header::CONTENT_TYPE, "application/json")
+            .body(axum::body::Body::from(
+                json!({ "email": "x@example.com", "password": "wrong password" }).to_string(),
+            ))
+            .unwrap();
+        req.extensions_mut()
+            .insert(ConnectInfo(std::net::SocketAddr::from((ip, 1234))));
+        server::app(state.clone(), None).oneshot(req)
+    };
+    for _ in 0..10 {
+        assert_eq!(
+            attempt([10, 0, 0, 1]).await.unwrap().status(),
+            StatusCode::UNAUTHORIZED
+        );
+    }
+    let blocked = attempt([10, 0, 0, 1]).await.unwrap();
+    assert_eq!(blocked.status(), StatusCode::TOO_MANY_REQUESTS);
+    assert!(blocked.headers().contains_key("retry-after"));
+    assert_eq!(
+        attempt([10, 0, 0, 2]).await.unwrap().status(),
+        StatusCode::UNAUTHORIZED,
+        "other addresses are not affected"
+    );
+}

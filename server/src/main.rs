@@ -17,6 +17,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
     tracing::info!("listening on {}", listener.local_addr()?);
-    axum::serve(listener, app(AppState::new(db), Some(web_dist))).await?;
+    // ConnectInfo gives handlers the client address (sign-in rate limiting).
+    let service = app(AppState::new(db), Some(web_dist))
+        .into_make_service_with_connect_info::<std::net::SocketAddr>();
+    axum::serve(listener, service).await?;
     Ok(())
 }

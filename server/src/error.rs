@@ -10,7 +10,7 @@ use utoipa::ToSchema;
 #[derive(Serialize, ToSchema)]
 pub struct ApiError {
     /// Stable machine-readable code: `bad_request`, `unauthorized`, `forbidden`, `not_found`,
-    /// `method_not_allowed`, `conflict`, `validation`, `internal`.
+    /// `method_not_allowed`, `conflict`, `too_many_requests`, `validation`, `internal`.
     pub error: String,
     /// Human-readable explanation, safe to show to a user.
     pub message: String,
@@ -24,6 +24,7 @@ pub enum AppError {
     BadCredentials,
     Forbidden,
     Conflict(&'static str),
+    TooManyRequests { retry_after_secs: u64 },
     Internal(&'static str),
     Validation(String),
     Db(sqlx::Error),
@@ -86,6 +87,17 @@ impl IntoResponse for AppError {
                 "only the owner can change this".to_owned(),
             ),
             Self::Conflict(m) => (StatusCode::CONFLICT, "conflict", m.to_owned()),
+            Self::TooManyRequests { retry_after_secs } => {
+                let body = ApiError {
+                    error: "too_many_requests".into(),
+                    message: format!("too many attempts, try again in {retry_after_secs} seconds"),
+                };
+                let retry = [(
+                    axum::http::header::RETRY_AFTER,
+                    retry_after_secs.to_string(),
+                )];
+                return (StatusCode::TOO_MANY_REQUESTS, retry, Json(body)).into_response();
+            }
             Self::Internal(what) => {
                 tracing::error!(what, "internal error");
                 (

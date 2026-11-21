@@ -10,7 +10,7 @@ export type ClientOptions = {
 export type ApiError = {
     /**
      * Stable machine-readable code: `bad_request`, `unauthorized`, `forbidden`, `not_found`,
-     * `method_not_allowed`, `conflict`, `validation`, `internal`.
+     * `method_not_allowed`, `conflict`, `too_many_requests`, `validation`, `internal`.
      */
     error: string;
     /**
@@ -105,6 +105,7 @@ export type LoginData = {
 export type LoginErrors = {
     401: ApiError;
     422: ApiError;
+    429: ApiError;
 };
 
 export type LoginError = LoginErrors[keyof LoginErrors];
@@ -172,6 +173,7 @@ export type RegisterData = {
 export type RegisterErrors = {
     409: ApiError;
     422: ApiError;
+    429: ApiError;
 };
 
 export type RegisterError = RegisterErrors[keyof RegisterErrors];

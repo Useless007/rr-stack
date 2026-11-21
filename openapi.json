@@ -50,6 +50,15 @@
                 }
               }
             }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -133,6 +142,15 @@
             }
           },
           "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
             "content": {
               "application/json": {
                 "schema": {
@@ -439,7 +457,7 @@
         "properties": {
           "error": {
             "type": "string",
-            "description": "Stable machine-readable code: `bad_request`, `unauthorized`, `forbidden`, `not_found`,\n`method_not_allowed`, `conflict`, `validation`, `internal`."
+            "description": "Stable machine-readable code: `bad_request`, `unauthorized`, `forbidden`, `not_found`,\n`method_not_allowed`, `conflict`, `too_many_requests`, `validation`, `internal`."
           },
           "message": {
             "type": "string",

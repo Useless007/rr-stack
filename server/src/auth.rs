@@ -13,6 +13,7 @@ use utoipa::ToSchema;
 
 use crate::AppState;
 use crate::error::{ApiError, AppError, AppJson};
+use crate::limit::ClientIp;
 
 const COOKIE: &str = "rr_session";
 const SESSION_DAYS: i64 = 30;
@@ -193,14 +194,17 @@ async fn verify_password(password: Password, hash: String) -> bool {
     responses(
         (status = CREATED, body = User, description = "Signed in: sets the rr_session cookie"),
         (status = CONFLICT, body = ApiError),
+        (status = TOO_MANY_REQUESTS, body = ApiError),
         (status = UNPROCESSABLE_ENTITY, body = ApiError),
     )
 )]
 pub async fn register(
     State(state): State<AppState>,
+    ClientIp(ip): ClientIp,
     jar: CookieJar,
     AppJson(creds): AppJson<Credentials>,
 ) -> Result<(StatusCode, CookieJar, AppJson<User>), AppError> {
+    limit(&state, ip)?;
     let hash = hash_password(creds.password).await?;
     let user = sqlx::query_as!(
         User,
@@ -223,14 +227,17 @@ pub async fn register(
     responses(
         (status = OK, body = User, description = "Signed in: sets the rr_session cookie"),
         (status = UNAUTHORIZED, body = ApiError),
+        (status = TOO_MANY_REQUESTS, body = ApiError),
         (status = UNPROCESSABLE_ENTITY, body = ApiError),
     )
 )]
 pub async fn login(
     State(state): State<AppState>,
+    ClientIp(ip): ClientIp,
     jar: CookieJar,
     AppJson(creds): AppJson<Credentials>,
 ) -> Result<(CookieJar, AppJson<User>), AppError> {
+    limit(&state, ip)?;
     let found = sqlx::query!(
         "SELECT id, email, password_hash FROM users WHERE email = $1",
         creds.email.0
@@ -297,4 +304,12 @@ pub async fn logout(
 )]
 pub async fn me(CurrentUser(user): CurrentUser) -> AppJson<User> {
     AppJson(user)
+}
+
+/// Caps password guessing (and Argon2 work) per client address.
+fn limit(state: &AppState, ip: std::net::IpAddr) -> Result<(), AppError> {
+    state
+        .sign_in_limit
+        .check(ip)
+        .map_err(|retry_after_secs| AppError::TooManyRequests { retry_after_secs })
 }
