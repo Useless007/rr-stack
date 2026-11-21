@@ -7,11 +7,13 @@ bun create rr-stack my-app
 ```
 
 Made for a team where AI agents write most of the code and people review it. One command,
-`scripts/check.sh`, answers "is it done?". If it exits 0, the SQL, the Rust API, the OpenAPI
+`bun run check`, answers "is it done?". If it exits 0, the SQL, the Rust API, the OpenAPI
 contract and the React code agree with each other.
 
+Works the same on Windows, macOS and Linux: every project command is a bun script.
+
 > **If you are an AI agent:** read this file for the map, then follow `AGENTS.md` in the project root.
-> Your task is done only when `scripts/check.sh` exits 0.
+> Your task is done only when `bun run check` exits 0.
 
 ## What you get
 
@@ -28,18 +30,18 @@ runtime.
 
 ## Requirements
 
-- Rust (stable), [bun](https://bun.sh), Docker
+- Rust (stable), [bun](https://bun.sh), Docker (Docker Desktop on Windows and macOS), git
 - `cargo install sqlx-cli --no-default-features --features postgres,rustls`
 
 ## Create a project
 
 ```bash
-bun create rr-stack my-app        # --no-install and --no-git skip those steps
+bun create rr-stack my-app        # asks a few questions; --yes, --no-install, --no-git skip them
 cd my-app
-docker compose up -d --wait
-(cd server && sqlx migrate run)
-scripts/check.sh                  # expect "check OK" on the last line
+bun run dev
 ```
+
+Open http://localhost:5173. The first run compiles the Rust server, which takes a minute.
 
 The CLI copies the template and renames the packages to `my-app-server` and `my-app-web`. Each
 project gets its own Postgres database name and host port (54000-54999), so two projects can run at
@@ -47,10 +49,8 @@ the same time. It also writes `.env`, runs `bun install` and runs `git init`.
 
 ## Run it
 
-```bash
-(cd server && cargo run)          # API on :3000, reads ../.env
-(cd web && bun run dev)           # UI on :5173, /api is proxied to :3000
-```
+`bun run dev` starts Postgres in Docker, the Rust API on :3000 and the app on :5173 (with `/api`
+proxied to the API). Ctrl+C stops the API and the app; the database keeps running.
 
 Open http://localhost:5173 (a prerendered page) and http://localhost:5173/app/todos (the SPA).
 
@@ -58,13 +58,15 @@ Open http://localhost:5173 (a prerendered page) and http://localhost:5173/app/to
 
 | Command | Exit 0 means | Run it when |
 |---|---|---|
-| `scripts/check.sh` | fmt, clippy, contract, typecheck, web build, `.sqlx`, tests all pass | before you call anything done |
-| `scripts/smoke.sh` | the real binary serves pages, deep links and the API over HTTP | you changed how files or routes are served |
-| `cd web && bun run gen` | `openapi.json` and `web/app/api/` regenerated | you changed a handler or a type that crosses the wire |
+| `bun run dev` | (keeps running) | you are working on the app |
+| `bun run check` | fmt, clippy, contract, typecheck, web build, `.sqlx`, tests all pass | before you call anything done |
+| `bun run smoke` | the real binary serves pages, deep links and the API over HTTP | you changed how files or routes are served |
+| `bun run gen` | `openapi.json` and `web/app/api/` regenerated | you changed a handler or a type that crosses the wire |
 | `cd server && cargo sqlx prepare -- --all-targets` | `server/.sqlx/` matches the SQL | you added or changed a query |
 
-`check.sh` needs the database. Without `DATABASE_URL` it fails on purpose. `SKIP_DB=1` runs the
-rest, and the output says that the result is not done.
+`bun run check` needs the database (`bun run dev` or `docker compose up -d --wait` starts it) and
+`sqlx-cli`. Without `DATABASE_URL` it fails on purpose. `SKIP_DB=1` runs the rest, and the output
+says that the result is not done.
 
 ## Where things are
 
@@ -77,16 +79,16 @@ web/app/routes.ts        page routes
 web/app/api/             GENERATED client, never edit by hand
 web/react-router.config.ts   prerender list: pages that search engines must see
 openapi.json             GENERATED contract, never edit by hand
-scripts/check.sh         definition of done
+scripts/check.ts         definition of done (bun run check)
 ```
 
 ## How a change flows
 
 1. Change the SQL in a migration, or add a query with `query!`.
 2. Change the Rust handler and its `ToSchema` types. Then register the route in `api_router()`.
-3. `cd web && bun run gen` regenerates the contract and the client.
+3. `bun run gen` regenerates the contract and the client.
 4. Use the generated `<operationId>Options()` or `<operationId>Mutation()` in a route.
-5. `scripts/check.sh`. If a layer disagrees with another, this is where it fails.
+5. `bun run check`. If a layer disagrees with another, this is where it fails.
 
 ## SEO pages and the app
 
@@ -97,11 +99,9 @@ In this version, prerendered pages cannot fetch from the API at build time.
 
 ## Production
 
-```bash
-(cd web && bun run build)
-(cd server && cargo build --release)
-WEB_DIST=web/build/client DATABASE_URL=postgres://... server/target/release/server
-```
+Build the pages with `bun run build` in `web/` and the server with `cargo build --release` in
+`server/`. Then run `server/target/release/server` (`server.exe` on Windows) with `WEB_DIST`
+pointing at `web/build/client` and `DATABASE_URL` at your database.
 
 The server runs migrations on startup.
 

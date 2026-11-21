@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { buildTemplate, dbPort, scaffold, validateName } from "./scaffold";
@@ -32,7 +32,8 @@ describe("scaffold", () => {
     for (const kept of ["openapi.json", "server/.sqlx", "web/app/api/sdk.gen.ts", "AGENTS.md"]) {
       expect(existsSync(join(dest, kept))).toBeTrue();
     }
-    expect(statSync(join(dest, "scripts/check.sh")).mode & 0o111).not.toBe(0);
+    expect(JSON.parse(readFileSync(join(dest, "package.json"), "utf8")).name).toBe("demo");
+    expect(existsSync(join(dest, "scripts/check.ts"))).toBeTrue();
   });
 
   test("refuses a non-empty destination and leaves it untouched", async () => {
@@ -96,5 +97,25 @@ describe("scaffold", () => {
     const readme = readFileSync(join(dest, "README.md"), "utf8");
     expect(readme.split("\n")[0]).toBe("# my-app");
     expect(readme).toContain("bun create rr-stack");
+  });
+
+});
+
+describe("create-rr-stack (non-interactive)", () => {
+  test("creates a project from flags and prints the next steps", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "rr-run-"));
+    const res = Bun.spawnSync([process.execPath, join(import.meta.dir, "index.ts"), "demo", "--no-install", "--no-git"], { cwd });
+    const out = res.stdout.toString();
+    expect(res.exitCode).toBe(0);
+    expect(out).toContain("Success!");
+    expect(out).toContain("bun run dev");
+    expect(existsSync(join(cwd, "demo", "server/Cargo.toml"))).toBeTrue();
+  });
+
+  test("rejects a bad name with exit 1", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "rr-run-"));
+    const res = Bun.spawnSync([process.execPath, join(import.meta.dir, "index.ts"), "Bad_Name", "--no-install", "--no-git"], { cwd });
+    expect(res.exitCode).toBe(1);
+    expect(existsSync(join(cwd, "Bad_Name"))).toBeFalse();
   });
 });

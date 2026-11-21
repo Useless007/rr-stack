@@ -4,16 +4,16 @@ React (React Router, `web/`) + Rust (Axum, `server/`), typed end to end through 
 
 ## Definition of done
 
-- Run `scripts/check.sh` and read its output. Exit 0 is the only "done".
-- Changed how the server serves pages or files? Also run `scripts/smoke.sh`.
+- Run `bun run check` and read its output. Exit 0 is the only "done".
+- Changed how the server serves pages or files? Also run `bun run smoke`.
 - Do not claim success from "it compiles" or from reading the diff.
 
 ## Never edit these by hand
 
-They are generated. `check.sh` fails if they differ from a fresh generation.
+They are generated. `bun run check` fails if they differ from a fresh generation.
 
 - `openapi.json` — from the Rust handlers (`cargo run --bin openapi`)
-- `web/app/api/**` — from `openapi.json` (`cd web && bun run gen`)
+- `web/app/api/**` — from `openapi.json` (`bun run gen` regenerates both)
 - `server/.sqlx/**` — from the SQL in `query!` macros (`cd server && cargo sqlx prepare -- --all-targets`)
 
 ## Where each type comes from
@@ -29,7 +29,7 @@ They are generated. `check.sh` fails if they differ from a fresh generation.
 1. Write the handler with `#[utoipa::path(..., operation_id = "camelCaseName")]` in `server/src/<domain>.rs`.
 2. Register it in `api_router()` in `server/src/lib.rs` with `routes!`.
 3. Add an integration test in `server/tests/` (`#[sqlx::test]` gives a fresh database).
-4. `cd web && bun run gen`, then use the generated `<name>Options()` / `<name>Mutation()` from `~/api/@tanstack/react-query.gen`.
+4. `bun run gen`, then use the generated `<name>Options()` / `<name>Mutation()` from `~/api/@tanstack/react-query.gen`.
 5. New SQL? `cargo sqlx prepare -- --all-targets` and commit `.sqlx/`.
 
 ## Rules
@@ -42,3 +42,5 @@ They are generated. `check.sh` fails if they differ from a fresh generation.
 - New public page that search engines must see? Add its path to `prerender` in
   `web/react-router.config.ts`. Everything else is SPA.
 - New migration: a new numbered file. Never edit one that is committed.
+- Scripts in `scripts/` are TypeScript run by bun so they work on Windows, macOS and Linux.
+  Do not add bash-only scripts or commands.

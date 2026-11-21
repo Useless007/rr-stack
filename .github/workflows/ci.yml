@@ -5,17 +5,11 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
-    services:
-      db:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_USER: rr
-          POSTGRES_PASSWORD: rr
-          POSTGRES_DB: rr
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U rr" --health-interval 2s --health-retries 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     env:
       DATABASE_URL: postgres://rr:rr@localhost:5432/rr
     steps:
@@ -28,11 +22,36 @@ jobs:
         with:
           workspaces: server
           cache-all-crates: true
+
+      - name: Postgres (Linux, Docker)
+        if: runner.os == 'Linux'
+        run: docker compose up -d --wait
+      - name: Postgres (Windows, preinstalled on the runner)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          PGPASSWORD: root
+        run: |
+          $svc = Get-Service -Name "postgresql*"
+          Set-Service -InputObject $svc -Status running -StartupType automatic
+          & "$env:PGBIN\psql" -U postgres -c "CREATE ROLE rr LOGIN SUPERUSER PASSWORD 'rr';"
+          & "$env:PGBIN\psql" -U postgres -c "CREATE DATABASE rr OWNER rr;"
+
       - run: cargo install sqlx-cli --locked --no-default-features --features postgres,rustls
       - run: bun install --frozen-lockfile
         working-directory: web
+      - run: bun install --frozen-lockfile
+        working-directory: cli
       - name: build with no database (offline .sqlx/)
+        shell: bash
         run: env -u DATABASE_URL SQLX_OFFLINE=true cargo build --all-targets
         working-directory: server
-      - run: scripts/check.sh
-      - run: scripts/smoke.sh
+      - run: bun run check
+      - run: bun run smoke
+      - name: scaffold a project with the CLI and build it
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP"
+          bun "$GITHUB_WORKSPACE/cli/index.ts" ci-demo --yes --no-git
+          cd ci-demo
+          SKIP_DB=1 bun run check
