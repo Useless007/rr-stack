@@ -44,6 +44,19 @@ if (!name) {
 const problem = validateName(name);
 if (problem) bail(`"${name}" is not a valid name: ${problem}`);
 
+const ssr = flags.has("--ssr")
+  ? true
+  : interactive
+    ? await ask(
+        p.select({
+          message: "How should pages render?",
+          options: [
+            { value: false, label: "Prerender + SPA", hint: "one Rust binary, no Node at runtime" },
+            { value: true, label: "Server rendering", hint: "every page as HTML per request; adds a bun process" },
+          ],
+        }),
+      )
+    : false;
 const install = flags.has("--no-install") ? false : interactive ? await ask(p.confirm({ message: "Install the web dependencies now?" })) : true;
 const git = flags.has("--no-git") ? false : interactive ? await ask(p.confirm({ message: "Initialize a git repository?" })) : true;
 
@@ -67,7 +80,7 @@ try {
     source = join(mkdtempSync(join(tmpdir(), "rr-template-")), "t");
     await buildTemplate(resolve(import.meta.dir, ".."), source);
   }
-  await scaffold({ name, dest, source });
+  await scaffold({ name, dest, source, ssr: ssr ? join(import.meta.dir, "ssr") : undefined });
 } catch (err) {
   if (ownsDest) rmSync(dest, { recursive: true, force: true });
   spin.error("Could not create the project");

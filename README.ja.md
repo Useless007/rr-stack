@@ -31,9 +31,10 @@ AI エージェントが持ち込むバグの多くは、2 つの層の食い違
 | API | Axum + utoipa | `openapi.json` はハンドラから自動生成 |
 | コントラクト | `openapi.json` | `bun run check` のたびに再生成して差分を確認 |
 | クライアント | hey-api + TanStack Query | 型付きエラーも含めてコントラクトから生成 |
-| UI | React Router（`ssr: false` + `prerender`） | `tsc` とフルビルド |
+| UI | React Router（`prerender` + SPA、または `--ssr` での `ssr: true`） | `tsc` とフルビルド |
 
-本番では 1 プロセスだけです。Axum が API とビルド済みのページを配信し、実行時に Node は不要です。
+デフォルトでは本番は 1 プロセスだけです。Axum が API とビルド済みのページを配信し、実行時に Node は不要です。
+`bun create rr-stack my-app --ssr` で作ると、すべてのページをサーバーでレンダリングし、Axum の後ろに bun のプロセスが 1 つ加わります。
 
 ## 仕組み
 
@@ -66,8 +67,8 @@ CI で再生成されないクライアントや、`/api/typo` に HTML を返�
 **さらに広げるには**
 
 - 検索エンジンに見せたいページは、`web/react-router.config.ts` の `prerender` にパスを追加すれば
-  静的 HTML として配信されます。リクエストごとのサーバーレンダリング（`ssr: true`）はまだ組み込まれて
-  いませんが、React Router のサーバーを Axum と並べて動かせば実現できます。
+  静的 HTML として配信されます。最初の HTML に訪問者ごとのデータを入れたい場合は `--ssr` でアプリを
+  作ると、ルートの `loader` がサーバーで実行されます（todo ページが例です）。
 - 別の言語のバックエンドがすでにある場合も、Web 側が読むのは `openapi.json` だけです。OpenAPI spec を
   出せるバックエンドなら、同じ生成クライアントと hooks を使えます。
 - Rust が初めてでも大丈夫です。コードはエージェントが書き、コンパイラが直す場所をエージェントに伝え、

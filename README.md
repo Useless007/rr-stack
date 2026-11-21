@@ -29,9 +29,11 @@ sends, an error shape nobody handles. RR stack moves each of those to compile ti
 | API | Axum + utoipa | `openapi.json` is derived from the handlers |
 | Contract | `openapi.json` | regenerated and diffed on every `bun run check` |
 | Client | hey-api + TanStack Query | generated from the contract, including typed errors |
-| UI | React Router (`ssr: false` + `prerender`) | `tsc` and a full build |
+| UI | React Router (`prerender` + SPA, or `ssr: true` with `--ssr`) | `tsc` and a full build |
 
-In production it is one process: Axum serves the API and the built pages. No Node at runtime.
+By default production is one process: Axum serves the API and the built pages, no Node at runtime.
+`bun create rr-stack my-app --ssr` renders every page on the server instead, with one added bun
+process behind Axum.
 
 ## How it works
 
@@ -64,8 +66,8 @@ one has a test.
 **Going further.**
 
 - Search engines need a page? Add its path to `prerender` in `web/react-router.config.ts` and it
-  ships as static HTML. Per-request server rendering (`ssr: true`) is not built in yet. It works
-  by running React Router's server next to Axum.
+  ships as static HTML. Pages with per-visitor data in their first HTML: create the app with
+  `--ssr`, and a route's `loader` runs on the server (the todo page is the example).
 - Already have a backend in another language? The web half only reads `openapi.json`, so any
   backend that publishes an OpenAPI spec can drive the same generated client and hooks.
 - New to Rust? The agent writes it and the compiler tells the agent exactly what to fix.

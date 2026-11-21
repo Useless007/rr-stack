@@ -62,6 +62,18 @@ jobs:
           cd ci-demo
           SKIP_DB=1 bun run check
 
+      - name: scaffold a --ssr project, check it and smoke-test the rendered pages
+        if: hashFiles('cli/package.json') != ''
+        shell: bash
+        run: |
+          # This repo's database (Linux: from .env, Windows: from the step above), not the new app's.
+          [ -n "${DATABASE_URL:-}" ] || export "$(grep '^DATABASE_URL=' "$GITHUB_WORKSPACE/.env")"
+          cd "$RUNNER_TEMP"
+          bun "$GITHUB_WORKSPACE/cli/index.ts" ci-ssr --ssr --yes --no-git
+          cd ci-ssr
+          bun run check
+          bun run smoke
+
   docker:
     runs-on: ubuntu-latest
     steps:
@@ -78,3 +90,31 @@ jobs:
             | grep -i '^set-cookie:' | sed -E 's/^[^:]+: *([^;]+).*/\1/' | tr -d '\r')
           test -n "$session"
           curl -fsS -H "cookie: $session" -X POST -H 'content-type: application/json' -d '{"title":"from docker"}' "$url/api/todos"
+
+  docker-ssr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Only in the rr-stack template repo; a project made from it skips this job's steps.
+      - if: hashFiles('cli/package.json') != ''
+        uses: oven-sh/setup-bun@v2
+      - if: hashFiles('cli/package.json') != ''
+        run: bun install --frozen-lockfile
+        working-directory: cli
+      - name: a --ssr project's docker compose up -d renders pages with their data
+        if: hashFiles('cli/package.json') != ''
+        run: |
+          cd "$RUNNER_TEMP"
+          bun "$GITHUB_WORKSPACE/cli/index.ts" ssr-docker --ssr --yes --no-git --no-install
+          cd ssr-docker
+          docker compose up -d --build --wait
+          url="http://$(docker compose port app 3000)"
+          curl -fsS --retry 30 --retry-all-errors --retry-delay 1 "$url/api/health"
+          curl -fsS "$url/" | grep -q "typed from the database to the screen"
+          session=$(curl -fsS -D - -o /dev/null -X POST -H 'content-type: application/json' \
+            -d '{"email":"ci@example.com","password":"ci-password-123"}' "$url/api/auth/register" \
+            | grep -i '^set-cookie:' | sed -E 's/^[^:]+: *([^;]+).*/\1/' | tr -d '\r')
+          id=$(curl -fsS -H "cookie: $session" -H 'content-type: application/json' -d '{"title":"from docker ssr"}' "$url/api/todos" \
+            | sed -E 's/.*"id":([0-9]+).*/\1/')
+          curl -fsS --retry 10 --retry-all-errors --retry-delay 1 -H "cookie: $session" "$url/app/todos/$id" \
+            | grep -q "<title>from docker ssr"

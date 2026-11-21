@@ -36,6 +36,29 @@ describe("scaffold", () => {
     expect(existsSync(join(dest, "scripts/check.ts"))).toBeTrue();
   });
 
+  test("--ssr adds the renderer, a loader route and two-process Docker files, still renamed", async () => {
+    const dest = freshDir();
+    await scaffold({ name: "demo", dest, source: template, ssr: join(import.meta.dir, "ssr") });
+    const read = (f: string) => readFileSync(join(dest, f), "utf8");
+    expect(read("web/react-router.config.ts")).toContain("ssr: true");
+    expect(existsSync(join(dest, "web/server.ts"))).toBeTrue();
+    expect(read("web/app/routes/todo.tsx")).toContain("export async function loader");
+    const compose = read("compose.yml");
+    expect(compose).toContain("WEB_SSR_URL: http://web:3001");
+    expect(compose).toContain(`127.0.0.1:${appPort("demo")}:3000`);
+    expect(compose).toContain("postgres://demo:demo@db:5432/demo");
+    expect(compose).not.toContain("POSTGRES_USER: rr");
+    expect(read("Dockerfile")).toContain("bun /app/web/server.ts");
+  });
+
+  test("without --ssr the project is prerender + SPA", async () => {
+    const dest = freshDir();
+    await scaffold({ name: "demo", dest, source: template });
+    expect(readFileSync(join(dest, "web/react-router.config.ts"), "utf8")).toContain("ssr: false");
+    expect(existsSync(join(dest, "web/server.ts"))).toBeFalse();
+    expect(readFileSync(join(dest, "compose.yml"), "utf8")).not.toContain("WEB_SSR_URL");
+  });
+
   test("refuses a non-empty destination and leaves it untouched", async () => {
     const dest = freshDir();
     await Bun.write(join(dest, "keep.txt"), "mine");

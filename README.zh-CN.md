@@ -29,9 +29,10 @@ AI agent 引入的大多数 bug，本质上是两层之间不一致：改了列�
 | API | Axum + utoipa | `openapi.json` 由 handler 自动生成 |
 | 契约 | `openapi.json` | 每次 `bun run check` 都重新生成并比对 |
 | 客户端 | hey-api + TanStack Query | 由契约生成，包括带类型的错误 |
-| UI | React Router（`ssr: false` + `prerender`） | `tsc` 和完整构建 |
+| UI | React Router（`prerender` + SPA，或使用 `--ssr` 时的 `ssr: true`） | `tsc` 和完整构建 |
 
-生产环境只有一个进程：Axum 同时提供 API 和构建好的页面，运行时不需要 Node。
+默认情况下生产环境只有一个进程：Axum 同时提供 API 和构建好的页面，运行时不需要 Node。
+用 `bun create rr-stack my-app --ssr` 创建时，每个页面都在服务端渲染，在 Axum 后面多一个 bun 进程。
 
 ## 工作原理
 
@@ -62,8 +63,8 @@ AI agent 引入的大多数 bug，本质上是两层之间不一致：改了列�
 **进一步扩展**
 
 - 想让搜索引擎看到某个页面？把它的路径加到 `web/react-router.config.ts` 的 `prerender` 里，它就会
-  以静态 HTML 发布。按请求的服务端渲染（`ssr: true`）还没有内置，可以在 Axum 旁边运行 React Router
-  的服务器来实现。
+  以静态 HTML 发布。需要首屏 HTML 就带上每个访客的数据？用 `--ssr` 创建应用，路由的 `loader` 会在
+  服务端运行（todo 页面就是示例）。
 - 已经有其他语言的后端？Web 端只读取 `openapi.json`，任何能输出 OpenAPI spec 的后端都能驱动同一套
   生成的客户端和 hooks。
 - 没写过 Rust？代码由 agent 来写，编译器会告诉 agent 该改哪里，`bun run check` 会告诉你什么时候完成。

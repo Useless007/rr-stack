@@ -75,18 +75,24 @@ export async function buildTemplate(repo: string, out: string): Promise<void> {
   await copyFile(join(repo, "cli", "project-readme.md"), join(out, "README.md"));
 }
 
-export async function scaffold(opts: { name: string; dest: string; source: string }): Promise<void> {
-  const { name, dest, source } = opts;
+/**
+ * Copies `source` into `dest` and renames it for `name`. `ssr` is the dir of files that replace or
+ * join the template for `ssr: true` apps (cli/ssr): the renderer, a loader route, Docker files.
+ */
+export async function scaffold(opts: { name: string; dest: string; source: string; ssr?: string }): Promise<void> {
+  const { name, dest, source, ssr } = opts;
   const existing = await readdir(dest).catch(() => []);
   if (existing.length > 0) throw new Error(`${dest} is not empty`);
 
-  for (const file of await readdir(source, { recursive: true, withFileTypes: true })) {
-    if (!file.isFile()) continue;
-    const from = join(file.parentPath, file.name);
-    const to = join(dest, from.slice(source.length + 1));
-    await mkdir(dirname(to), { recursive: true });
-    await copyFile(from, to);
-    if (file.name === GITIGNORE) await rename(to, join(dirname(to), ".gitignore"));
+  for (const dir of ssr ? [source, ssr] : [source]) {
+    for (const file of await readdir(dir, { recursive: true, withFileTypes: true })) {
+      if (!file.isFile()) continue;
+      const from = join(file.parentPath, file.name);
+      const to = join(dest, from.slice(dir.length + 1));
+      await mkdir(dirname(to), { recursive: true });
+      await copyFile(from, to);
+      if (file.name === GITIGNORE) await rename(to, join(dirname(to), ".gitignore"));
+    }
   }
 
   const crate = `name = "${name}-server"`;

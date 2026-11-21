@@ -1,5 +1,6 @@
 // Builds the web app, runs the real server binary, and checks what a browser and an API client get.
 import { $ } from "bun";
+import { existsSync } from "node:fs";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { bun, exe, fail, loadEnv, onExit, run, serverDir, webDir } from "./lib";
@@ -10,19 +11,33 @@ if (!process.env.DATABASE_URL) fail("DATABASE_URL is not set (copy .env.example 
 await run($`${bun} run build`.cwd(webDir), true);
 await run($`cargo build -q --bin server`.cwd(serverDir), true);
 
-const port = await new Promise<number>((resolve) => {
-  const s = createServer().listen(0, "127.0.0.1", () => {
-    const { port } = s.address() as { port: number };
-    s.close(() => resolve(port));
+const freePort = () =>
+  new Promise<number>((resolve) => {
+    const s = createServer().listen(0, "127.0.0.1", () => {
+      const { port } = s.address() as { port: number };
+      s.close(() => resolve(port));
+    });
   });
-});
-const server = Bun.spawn([join(serverDir, "target", "debug", `server${exe}`)], {
-  env: { ...process.env, PORT: String(port), WEB_DIST: join(webDir, "build", "client") },
-  stdout: "ignore",
-  stderr: "pipe",
-});
-onExit(() => server.kill());
+const port = await freePort();
 const base = `http://127.0.0.1:${port}`;
+
+// Apps created with --ssr render pages in web/server.ts; the Rust server forwards to it.
+const ssr = existsSync(join(webDir, "server.ts"));
+const env: Record<string, string | undefined> = { ...process.env, PORT: String(port), WEB_DIST: join(webDir, "build", "client") };
+let renderer: ReturnType<typeof Bun.spawn> | undefined;
+if (ssr) {
+  const webPort = await freePort();
+  renderer = Bun.spawn([bun, "server.ts"], {
+    cwd: webDir,
+    env: { ...process.env, WEB_PORT: String(webPort), API_URL: base },
+    stdout: "ignore",
+    stderr: "inherit",
+  });
+  onExit(() => renderer?.kill());
+  env.WEB_SSR_URL = `http://127.0.0.1:${webPort}`;
+}
+const server = Bun.spawn([join(serverDir, "target", "debug", `server${exe}`)], { env, stdout: "ignore", stderr: "pipe" });
+onExit(() => server.kill());
 
 try {
   let up = false;
@@ -43,7 +58,7 @@ try {
 
   if (!(await expect("/", 200)).body.includes("typed from the database to the screen")) fail("smoke FAIL: / is not the prerendered landing page");
   if (!(await expect("/api-reference/", 200)).body.includes("/api/todos/{id}")) fail("smoke FAIL: /api-reference was not prerendered from openapi.json");
-  if (!(await expect("/app/todos", 200)).body.includes("<script")) fail("smoke FAIL: /app/todos did not return the SPA shell");
+  if (!(await expect("/app/todos", 200)).body.includes("<script")) fail(`smoke FAIL: /app/todos did not return ${ssr ? "a rendered page" : "the SPA shell"}`);
   if (!(await expect("/api/nope", 404)).type.startsWith("application/json")) fail("smoke FAIL: /api/nope is not JSON");
   // Realtime: a change made over HTTP must reach a WebSocket client.
   const ws = new WebSocket(`ws://127.0.0.1:${port}/api/events`);
@@ -68,10 +83,17 @@ try {
   const event = JSON.parse(await Promise.race([received, Bun.sleep(5000).then(() => "{}")]));
   if (event.type !== "created" || event.todo?.id !== todo.id) fail("smoke FAIL: WebSocket /api/events did not deliver the created event");
   ws.close();
+  if (ssr) {
+    // The loader ran on the server: the todo is in the first HTML, title included.
+    const page = (await expect(`/app/todos/${todo.id}`, 200, { headers: { cookie: json.cookie } })).body;
+    if (!page.includes("<title>smoke · RR stack</title>") || !page.includes('value="smoke"')) fail(`smoke FAIL: /app/todos/${todo.id} was not rendered with its data`);
+    await expect("/app/todos/999999999", 404);
+  }
   await expect(`/api/todos/${todo.id}`, 200, { method: "PATCH", headers: json, body: '{"done":true}' });
   await expect(`/api/todos/${todo.id}`, 204, { method: "DELETE", headers: json });
   await expect("/api/auth/logout", 204, { method: "POST", headers: json });
-  console.log("smoke OK");
+  console.log(`smoke OK${ssr ? " (ssr)" : ""}`);
 } finally {
   server.kill();
+  renderer?.kill();
 }
