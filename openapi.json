@@ -264,7 +264,7 @@
         "properties": {
           "error": {
             "type": "string",
-            "description": "Stable machine-readable code: `bad_request`, `not_found`, `validation`, `internal`."
+            "description": "Stable machine-readable code: `bad_request`, `not_found`, `method_not_allowed`, `validation`, `internal`."
           },
           "message": {
             "type": "string",

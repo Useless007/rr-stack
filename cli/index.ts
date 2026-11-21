@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import * as p from "@clack/prompts";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { styleText } from "node:util";
@@ -40,11 +40,14 @@ const install = flags.has("--no-install") ? false : interactive ? await ask(p.co
 const git = flags.has("--no-git") ? false : interactive ? await ask(p.confirm({ message: "Initialize a git repository?" })) : true;
 
 const dest = resolve(process.cwd(), name);
+// Only a folder this run creates may be cleaned up; an existing one is never touched.
+if (existsSync(dest) && readdirSync(dest).length > 0) bail(`${dest} already exists and is not empty. Pick another name.`);
+const ownsDest = !existsSync(dest);
 let created = false;
 // Ctrl+C while a spinner runs: stop, and remove a half-copied project.
 const spin = p.spinner({
   onCancel: () => {
-    if (!created) rmSync(dest, { recursive: true, force: true });
+    if (!created && ownsDest) rmSync(dest, { recursive: true, force: true });
     process.exit(130);
   },
 });
@@ -58,6 +61,7 @@ try {
   }
   await scaffold({ name, dest, source });
 } catch (err) {
+  if (ownsDest) rmSync(dest, { recursive: true, force: true });
   spin.error("Could not create the project");
   bail((err as Error).message);
 }

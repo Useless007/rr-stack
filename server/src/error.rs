@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 /// The body of every 4xx/5xx the API returns, so clients get a typed error instead of plain text.
 #[derive(Serialize, ToSchema)]
 pub struct ApiError {
-    /// Stable machine-readable code: `bad_request`, `not_found`, `validation`, `internal`.
+    /// Stable machine-readable code: `bad_request`, `not_found`, `method_not_allowed`, `validation`, `internal`.
     pub error: String,
     /// Human-readable explanation, safe to show to a user.
     pub message: String,
@@ -18,6 +18,7 @@ pub struct ApiError {
 pub enum AppError {
     BadRequest(String),
     NotFound(&'static str),
+    MethodNotAllowed,
     Validation(String),
     Db(sqlx::Error),
 }
@@ -57,6 +58,11 @@ impl IntoResponse for AppError {
                 StatusCode::NOT_FOUND,
                 "not_found",
                 format!("{what} not found"),
+            ),
+            Self::MethodNotAllowed => (
+                StatusCode::METHOD_NOT_ALLOWED,
+                "method_not_allowed",
+                "this path does not accept that method".to_owned(),
             ),
             Self::Validation(m) => (StatusCode::UNPROCESSABLE_ENTITY, "validation", m),
             Self::Db(err) => {

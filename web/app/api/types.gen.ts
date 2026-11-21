@@ -9,7 +9,7 @@ export type ClientOptions = {
  */
 export type ApiError = {
     /**
-     * Stable machine-readable code: `bad_request`, `not_found`, `validation`, `internal`.
+     * Stable machine-readable code: `bad_request`, `not_found`, `method_not_allowed`, `validation`, `internal`.
      */
     error: string;
     /**

@@ -18,7 +18,7 @@ const port = await new Promise<number>((resolve) => {
 });
 const server = Bun.spawn([join(serverDir, "target", "debug", `server${exe}`)], {
   env: { ...process.env, PORT: String(port), WEB_DIST: join(webDir, "build", "client") },
-  stdout: "pipe",
+  stdout: "ignore",
   stderr: "pipe",
 });
 onExit(() => server.kill());

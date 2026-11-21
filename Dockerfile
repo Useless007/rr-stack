@@ -7,13 +7,14 @@ RUN cd web && bun install --frozen-lockfile
 COPY web web
 RUN cd web && bun run build
 
-FROM rust:1-slim AS server
+FROM rust:1-slim-bookworm AS server
 WORKDIR /src/server
 COPY server ./
 # Queries are checked against the committed .sqlx/ metadata, so no database is needed to build.
 ENV SQLX_OFFLINE=true
 RUN cargo build --release --locked --bin server
 
+# Same Debian release as the build stage, so the binary's glibc matches.
 FROM debian:bookworm-slim
 COPY --from=server /src/server/target/release/server /app/server
 COPY --from=web /src/web/build/client /app/web
