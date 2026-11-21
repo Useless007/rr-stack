@@ -18,7 +18,7 @@ async fn call(db: &PgPool, method: Method, uri: &str, body: Option<Value>) -> (S
         None => req.body(Body::empty()),
     }
     .unwrap();
-    let res: Response = app(AppState { db: db.clone() }, None)
+    let res: Response = app(AppState::new(db.clone()), None)
         .oneshot(req)
         .await
         .unwrap();

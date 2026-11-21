@@ -55,6 +55,7 @@ export default function Dashboard() {
             .
           </p>
         )}
+        {!!recent.data?.length && (
         <ul className="mt-4 divide-y divide-ink/10 border-y border-ink/10 dark:divide-paper/10 dark:border-paper/10">
           {recent.data?.slice(0, 5).map((t) => (
             <li key={t.id} className="flex items-baseline justify-between gap-4 py-3.5 leading-relaxed">
@@ -67,6 +68,7 @@ export default function Dashboard() {
             </li>
           ))}
         </ul>
+        )}
       </section>
     </div>
   );

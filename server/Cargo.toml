@@ -12,7 +12,7 @@ name = "server"
 path = "src/main.rs"
 
 [dependencies]
-axum = { version = "0.8.9", features = ["macros"] }
+axum = { version = "0.8.9", features = ["macros", "ws"] }
 chrono = { version = "0.4.45", default-features = false, features = ["std", "clock", "serde"] }
 dotenvy = "0.15.7"
 serde = { version = "1.0.229", features = ["derive"] }
@@ -26,7 +26,9 @@ utoipa = "6.0.0"
 utoipa-axum = "0.3.0"
 
 [dev-dependencies]
+futures-util = "0.3.34"
 http-body-util = "0.1.5"
+tokio-tungstenite = "0.30.0"
 tower = { version = "0.5.3", features = ["util"] }
 
 [lints.clippy]

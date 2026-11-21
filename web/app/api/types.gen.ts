@@ -40,6 +40,20 @@ export type Todo = {
 };
 
 /**
+ * Pushed to every client connected to `GET /api/events` (WebSocket) when a todo changes.
+ */
+export type TodoEvent = {
+    todo: Todo;
+    type: 'created';
+} | {
+    todo: Todo;
+    type: 'updated';
+} | {
+    id: number;
+    type: 'deleted';
+};
+
+/**
  * Fields left out are not changed.
  */
 export type TodoPatch = {

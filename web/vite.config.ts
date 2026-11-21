@@ -9,7 +9,7 @@ export default defineConfig({
   },
   server: {
     // Regex, not "/api": a plain prefix would also proxy /api-reference.
-    proxy: { "^/api(/|$)": "http://localhost:3000" },
+    proxy: { "^/api(/|$)": { target: "http://localhost:3000", ws: true } },
     strictPort: true,
     // api-reference imports ../openapi.json at build time.
     fs: { allow: [".."] },

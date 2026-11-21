@@ -1,6 +1,8 @@
 import { NavLink, Outlet } from "react-router";
+import { LiveBadge, useLiveTodos } from "~/components/live";
 
 export default function PlaygroundLayout() {
+  const live = useLiveTodos();
   return (
     <>
       <div className="mt-16 flex flex-wrap items-baseline justify-between gap-4">
@@ -25,8 +27,12 @@ export default function PlaygroundLayout() {
       </div>
       <p className="muted mt-3 max-w-[60ch]">
         A live app on the real API. Every request goes through the client generated in{" "}
-        <code className="font-mono text-[0.9em]">web/app/api</code>.
+        <code className="font-mono text-[0.9em]">web/app/api</code>. Open it in two tabs: a change in
+        one appears in the other through a WebSocket.
       </p>
+      <div className="mt-3">
+        <LiveBadge {...live} />
+      </div>
       <Outlet />
     </>
   );

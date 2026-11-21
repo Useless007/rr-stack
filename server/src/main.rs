@@ -17,6 +17,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
     tracing::info!("listening on {}", listener.local_addr()?);
-    axum::serve(listener, app(AppState { db }, Some(web_dist))).await?;
+    axum::serve(listener, app(AppState::new(db), Some(web_dist))).await?;
     Ok(())
 }

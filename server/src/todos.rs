@@ -6,6 +6,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::AppState;
 use crate::error::{ApiError, AppError, AppJson, AppPath, AppQuery};
+use crate::events::TodoEvent;
 
 /// A title that is already trimmed and 1..=200 characters; it cannot be built any other way.
 #[derive(Deserialize, ToSchema)]
@@ -38,7 +39,7 @@ pub struct TodoPatch {
     pub done: Option<bool>,
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Clone, Serialize, ToSchema)]
 pub struct Todo {
     pub id: i64,
     pub title: String,
@@ -165,7 +166,10 @@ pub async fn create_todo(
     )
     .fetch_one(&state.db)
     .await?;
-    Ok((StatusCode::CREATED, AppJson(row.into())))
+    let todo = Todo::from(row);
+    // No receivers is normal (nobody has the page open), so the send result is ignored.
+    let _ = state.events.send(TodoEvent::Created { todo: todo.clone() });
+    Ok((StatusCode::CREATED, AppJson(todo)))
 }
 
 #[utoipa::path(
@@ -196,7 +200,9 @@ pub async fn update_todo(
     .fetch_optional(&state.db)
     .await?
     .ok_or(AppError::NotFound("todo"))?;
-    Ok(AppJson(row.into()))
+    let todo = Todo::from(row);
+    let _ = state.events.send(TodoEvent::Updated { todo: todo.clone() });
+    Ok(AppJson(todo))
 }
 
 #[utoipa::path(
@@ -217,6 +223,7 @@ pub async fn delete_todo(
     if deleted == 0 {
         return Err(AppError::NotFound("todo"));
     }
+    let _ = state.events.send(TodoEvent::Deleted { id });
     Ok(StatusCode::NO_CONTENT)
 }
 

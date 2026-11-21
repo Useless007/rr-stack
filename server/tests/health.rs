@@ -10,7 +10,7 @@ use tower::ServiceExt;
 
 #[sqlx::test]
 async fn health_ok(db: PgPool) {
-    let res = app(AppState { db }, None)
+    let res = app(AppState::new(db), None)
         .oneshot(Request::get("/api/health").body(Body::empty()).unwrap())
         .await
         .unwrap();

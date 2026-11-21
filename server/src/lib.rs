@@ -1,4 +1,5 @@
 mod error;
+mod events;
 mod health;
 mod todos;
 
@@ -17,7 +18,22 @@ use utoipa_axum::routes;
 #[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,
+    pub events: tokio::sync::broadcast::Sender<events::TodoEvent>,
 }
+
+impl AppState {
+    pub fn new(db: PgPool) -> Self {
+        Self {
+            db,
+            events: events::channel(),
+        }
+    }
+}
+
+/// Schemas that no HTTP route returns but clients still need typed (WebSocket messages).
+#[derive(utoipa::OpenApi)]
+#[openapi(components(schemas(events::TodoEvent)))]
+struct ExtraSchemas;
 
 /// Every API route is registered here; the OpenAPI spec and the runtime router both come from it.
 pub fn api_router() -> OpenApiRouter<AppState> {
@@ -30,7 +46,7 @@ pub fn api_router() -> OpenApiRouter<AppState> {
             todos::delete_todo
         ))
         .routes(routes!(todos::get_stats));
-    OpenApiRouter::new().nest("/api", api)
+    OpenApiRouter::with_openapi(<ExtraSchemas as utoipa::OpenApi>::openapi()).nest("/api", api)
 }
 
 pub fn openapi() -> OpenApi {
@@ -41,6 +57,7 @@ pub fn openapi() -> OpenApi {
 pub fn app(state: AppState, web_dist: Option<PathBuf>) -> Router {
     let (router, _) = api_router().split_for_parts();
     let router = router
+        .route("/api/events", axum::routing::get(events::events))
         .route("/api", any(json_404))
         .route("/api/", any(json_404))
         .route("/api/{*rest}", any(json_404))

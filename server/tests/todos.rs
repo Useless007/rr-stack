@@ -10,7 +10,7 @@ use sqlx::PgPool;
 use tower::ServiceExt;
 
 async fn send(db: &PgPool, req: Request<Body>) -> Response {
-    app(AppState { db: db.clone() }, None)
+    app(AppState::new(db.clone()), None)
         .oneshot(req)
         .await
         .unwrap()

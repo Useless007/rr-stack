@@ -45,8 +45,16 @@ try {
   if (!(await expect("/api-reference/", 200)).body.includes("/api/todos/{id}")) fail("smoke FAIL: /api-reference was not prerendered from openapi.json");
   if (!(await expect("/app/todos", 200)).body.includes("<script")) fail("smoke FAIL: /app/todos did not return the SPA shell");
   if (!(await expect("/api/nope", 404)).type.startsWith("application/json")) fail("smoke FAIL: /api/nope is not JSON");
+  // Realtime: a change made over HTTP must reach a WebSocket client.
+  const ws = new WebSocket(`ws://127.0.0.1:${port}/api/events`);
+  await new Promise((ok, no) => ((ws.onopen = ok), (ws.onerror = no)));
+  const received = new Promise<string>((ok) => (ws.onmessage = (m) => ok(String(m.data))));
+
   const json = { "content-type": "application/json" };
   const todo = JSON.parse((await expect("/api/todos", 201, { method: "POST", headers: json, body: '{"title":"smoke"}' })).body);
+  const event = JSON.parse(await Promise.race([received, Bun.sleep(5000).then(() => "{}")]));
+  if (event.type !== "created" || event.todo?.id !== todo.id) fail("smoke FAIL: WebSocket /api/events did not deliver the created event");
+  ws.close();
   await expect(`/api/todos/${todo.id}`, 200, { method: "PATCH", headers: json, body: '{"done":true}' });
   await expect(`/api/todos/${todo.id}`, 204, { method: "DELETE" });
   console.log("smoke OK");

@@ -63,6 +63,17 @@ export default function ApiReference() {
             </div>
           </li>
         ))}
+        <li className="py-5">
+          <div className="flex flex-wrap items-baseline gap-x-3">
+            <span className="w-16 shrink-0 font-mono text-sm font-medium text-patina-deep dark:text-patina">WS</span>
+            <code className="font-mono">/api/events</code>
+            <span className="muted text-sm">TodoEvent</span>
+          </div>
+          <p className="muted mt-2 text-sm sm:pl-[4.75rem]">
+            WebSocket. Sends a <code className="font-mono">TodoEvent</code> (created, updated or deleted) for every change.
+            The type is in the contract, so the client is typed too.
+          </p>
+        </li>
       </ul>
     </>
   );

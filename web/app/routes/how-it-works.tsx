@@ -18,6 +18,7 @@ const steps = [
   "Run bun run gen. openapi.json and web/app/api/ are rewritten from the handlers.",
   "Use the generated Options() or Mutation() hook in a route.",
   "Run bun run check. If any layer disagrees with another, this is where it fails.",
+  "Need realtime? Send an event on the broadcast channel in AppState; every open page gets it over /api/events.",
 ];
 
 export default function HowItWorks() {
