@@ -10,7 +10,9 @@ React (React Router, `web/`) + Rust (Axum, `server/`), typed end to end through 
   walks the todo flow, and fails on any JavaScript error, hydration mismatch or 5xx. A failing test
   saves screenshots in `web/e2e/results/`: look at them before changing code.
 - New page: add its path to `web/e2e/pages.test.ts`. New user flow: add a test in `web/e2e/` that
-  finds elements by role and label (`getByRole`, `getByLabel`), never by CSS class.
+  finds elements by role and label (`getByRole`, `getByLabel`), never by CSS class. Use `unique()`
+  for data, since runs share the dev database, and wait for the API's answer before a reload. The
+  server allows 10 sign-ups or sign-ins per minute per address: reuse a signed-in page.
 - Do not claim success from "it compiles" or from reading the diff.
 
 ## Never edit these by hand

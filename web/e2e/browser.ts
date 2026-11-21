@@ -17,10 +17,18 @@ async function watch(context: BrowserContext): Promise<{ page: Page; errors: str
   page.setDefaultTimeout(10_000);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(`uncaught: ${e.message}`));
-  // "Failed to load resource" is the browser reporting a 4xx such as GET /api/auth/me signed out;
-  // those are normal. Server errors are caught from the responses below.
+  // "Failed to load resource" is the browser reporting a 4xx response, which the API answers on
+  // purpose (GET /api/auth/me signed out). Responses are checked below instead: any 5xx, and any 4xx
+  // outside /api (a missing script, stylesheet, font or image).
   page.on("console", (m) => m.type() === "error" && !m.text().startsWith("Failed to load resource") && errors.push(`console: ${m.text()}`));
-  page.on("response", (r) => r.status() >= 500 && errors.push(`${r.status()} from ${r.request().method()} ${r.url()}`));
+  page.on("response", (r) => {
+    const api = new URL(r.url()).pathname.startsWith("/api/");
+    if (r.status() >= 500 || (r.status() >= 400 && !api && r.request().resourceType() !== "document")) {
+      errors.push(`${r.status()} from ${r.request().method()} ${r.url()}`);
+    }
+  });
+  // ERR_ABORTED is a request the page cancelled itself, such as navigating away.
+  page.on("requestfailed", (r) => r.failure()?.errorText !== "net::ERR_ABORTED" && errors.push(`failed: ${r.url()} ${r.failure()?.errorText}`));
   return { page, errors };
 }
 
@@ -48,7 +56,10 @@ export async function withPages(name: string, count: number, test: (pages: Page[
         return `${file} (${p.url()})`;
       }),
     );
-    throw new Error(`${err instanceof Error ? err.message : err}\nScreenshots:\n  ${shots.join("\n  ")}`, { cause: err });
+    const errors = watched.flatMap((w) => w.errors);
+    const already = err instanceof Error && err.message.startsWith("the page reported errors");
+    const seen = errors.length && !already ? `\nThe page also reported:\n  ${errors.join("\n  ")}` : "";
+    throw new Error(`${err instanceof Error ? err.message : err}${seen}\nScreenshots:\n  ${shots.join("\n  ")}`, { cause: err });
   } finally {
     await browser.close();
   }

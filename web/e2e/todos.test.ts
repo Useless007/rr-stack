@@ -12,6 +12,14 @@ async function signUp(page: Page) {
   await settle(page);
 }
 
+/** Clicks, and waits until the API has answered the write it caused. The page redraws before that. */
+async function saved(page: Page, click: () => Promise<void>) {
+  await Promise.all([
+    page.waitForResponse((r) => new URL(r.url()).pathname.startsWith("/api/todos") && r.request().method() !== "GET" && r.ok()),
+    click(),
+  ]);
+}
+
 async function add(page: Page, title: string) {
   await page.getByLabel("New todo").fill(title);
   await page.getByRole("button", { name: "Add todo" }).click();
@@ -25,14 +33,16 @@ test("sign up, add, complete, search, edit and delete a todo", () =>
     await add(page!, title);
 
     // Completing survives a reload: it was saved by the API, not only drawn.
-    await page!.getByRole("checkbox", { name: `Mark "${title}" as done` }).click();
-    await page!.getByRole("checkbox", { name: `Mark "${title}" as open` }).waitFor();
+    await saved(page!, () => page!.getByRole("checkbox", { name: `Mark "${title}" as done` }).click());
     await page!.reload();
     await page!.getByRole("checkbox", { name: `Mark "${title}" as open` }).waitFor();
 
-    // Search goes into the URL, so the filtered list can be linked to.
+    // Search filters the list and goes into the URL, so the filtered list can be linked to.
+    const other = unique("Walk the dog");
+    await add(page!, other);
     await page!.getByLabel("Search todos").fill(title);
     await page!.waitForURL(/[?&]q=/);
+    await page!.getByRole("link", { name: other }).waitFor({ state: "detached" });
     await page!.getByRole("link", { name: title }).waitFor();
 
     // The detail page edits the title.
@@ -40,7 +50,7 @@ test("sign up, add, complete, search, edit and delete a todo", () =>
     await page!.waitForURL(/\/app\/todos\/\d+$/);
     const renamed = unique("Buy oat milk");
     await page!.getByLabel("Title").fill(renamed);
-    await page!.getByRole("button", { name: "Save" }).click();
+    await saved(page!, () => page!.getByRole("button", { name: "Save" }).click());
     await page!.reload();
     expect(await page!.getByLabel("Title").inputValue()).toBe(renamed);
 
@@ -54,7 +64,8 @@ test("sign up, add, complete, search, edit and delete a todo", () =>
 test("a todo added in one browser appears in another without a reload", () =>
   withPages("realtime", 2, async ([author, reader]) => {
     await reader!.goto("/app/todos");
-    await settle(reader!);
+    // The socket connects after the page loads; an event sent before that would be missed.
+    await reader!.getByRole("status").filter({ hasText: /^Live/ }).waitFor();
     await signUp(author!);
     const title = unique("Seen live");
     await add(author!, title);

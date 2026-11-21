@@ -3,6 +3,8 @@
 # Needs SITE_URL and POSTGRES_PASSWORD in .env. Step by step: DEPLOY.md.
 services:
   db:
+    # Come back after a reboot like the other services.
+    restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (openssl rand -hex 24)}
     ports: !reset []

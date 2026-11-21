@@ -62,7 +62,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: e2e-results-${{ matrix.os }}
-          path: web/e2e/results/
+          path: |
+            web/e2e/results/
+            ${{ runner.temp }}/*/web/e2e/results/
           if-no-files-found: ignore
 
       - name: scaffold a project with the CLI and check it
@@ -125,8 +127,9 @@ jobs:
           curl -fsSk --retry 30 --retry-all-errors --retry-delay 1 https://localhost/api/health
           curl -fsSk https://localhost/sitemap.xml | grep -q "<loc>https://localhost/how-it-works</loc>"
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost/)" = 308
-          # Only Caddy is reachable from outside.
-          test -z "$(docker compose -f compose.yml -f compose.prod.yml port app 3000 2>/dev/null)"
+          # Only Caddy is reachable: the app (8000) and Postgres (5432) ports are closed.
+          if curl -s --max-time 2 http://127.0.0.1:8000/api/health; then echo "app port is open"; exit 1; fi
+          if timeout 2 bash -c '</dev/tcp/127.0.0.1/5432'; then echo "Postgres port is open"; exit 1; fi
 
   docker-ssr:
     strategy:

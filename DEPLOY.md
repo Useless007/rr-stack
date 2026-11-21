@@ -32,7 +32,7 @@ POSTGRES_PASSWORD=<output of: openssl rand -hex 24>
 COMPOSE_FILE=compose.yml:compose.prod.yml
 ```
 
-- `SITE_URL` is your domain with `https://`. Caddy requests the certificate for it, and the pages are
+- `SITE_URL` is your domain with `https://` and no `/` at the end. Caddy requests the certificate for it, and the pages are
   built with it (canonical links, share cards, `sitemap.xml`).
 - `POSTGRES_PASSWORD` is set once, when the database volume is created. Use letters and digits only:
   it goes into a connection URL. Changing it later does not change the database's password.
@@ -66,8 +66,11 @@ git pull
 docker compose up -d --build --wait
 ```
 
-New migrations run on start. A migration that fails stops the server from starting and leaves the
-database as it was before that migration; `docker compose logs app` says why.
+Back up first (below). New migrations run on start, each in its own transaction: one that fails
+leaves the database as it was before it, and the server exits and keeps restarting, so the site is
+down until you fix it. `docker compose logs app` says why. Going back to an older version after a
+newer migration ran does not work either: the server refuses to start with migrations it does not
+know. Restore the backup instead.
 
 ## Back up and restore
 
@@ -85,7 +88,12 @@ docker compose start app
 ```
 
 Copy backups off the server: a backup on the same disk is lost with the disk. To run one every
-night, add the backup line to the server's crontab (`crontab -e`) with full paths.
+night at 03:00, add this to the server's crontab (`crontab -e`), with your own paths. Cron reads `%`
+as a line break, hence `\%`, and it must `cd` into the project to see `.env`:
+
+```sh
+0 3 * * * cd /srv/app && docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > /srv/backups/backup-$(date +\%F).sql
+```
 
 Never run `docker compose down -v` on the server: `-v` deletes the database volume and Caddy's
 certificates.

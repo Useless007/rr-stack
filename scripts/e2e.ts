@@ -10,7 +10,8 @@ loadEnv();
 await run($`${bun} --bun playwright-core install --only-shell chromium`.cwd(webDir), true);
 
 const app = await startApp();
-const tests = Bun.spawn([bun, "test", "e2e", ...process.argv.slice(2)], {
+// bun's 5 s default would cut a test off before Playwright's own 10 s waits fail and screenshot it.
+const tests = Bun.spawn([bun, "test", "--timeout", "60000", "./e2e", ...process.argv.slice(2)], {
   cwd: webDir,
   env: { ...process.env, E2E_BASE_URL: app.base },
   stdio: ["inherit", "inherit", "inherit"],
