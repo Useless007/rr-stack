@@ -10,8 +10,10 @@ with; existing projects are not updated.
   an Open Graph card (`web/public/og.png`, a Rust crab holding the React logo). `/robots.txt` points
   at the sitemap. Playground pages, `/sign-in` and the 404 page carry `noindex`. With `--ssr`, an
   unknown path answers 404 instead of 200.
-- New `SITE_URL` setting (`.env`, passed into the Docker build by `docker compose`): the public
-  address these absolute URLs are built from.
+- New `SITE_URL` setting in `.env` (read by `bun run build`, passed into the Docker build by
+  `docker compose`): the public address these absolute URLs are built from.
+- A prerendered page is served at its own URL (`/how-it-works`) instead of a 307 redirect to
+  `/how-it-works/`, so canonical links and the sitemap name a page, not a redirect.
 - Includes 0.5.1, which was not published on its own.
 
 ## 0.5.1 (2026-11-22)

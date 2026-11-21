@@ -156,6 +156,8 @@ describe("scaffold", () => {
     expect(compose).toContain("postgres://my_app:my_app@db:5432/my_app");
     expect(compose).toContain(`127.0.0.1:${appPort("my-app")}:3000`);
     expect(compose).toContain(`http://localhost:${appPort("my-app")}`);
+    expect(compose).toContain(`SITE_URL: ${"$"}{SITE_URL:-http://localhost:${appPort("my-app")}}`);
+    expect(compose).not.toContain("localhost:8000");
     expect(compose).not.toMatch(/\brr\b/);
     const env = readFileSync(join(dest, ".env"), "utf8");
     expect(env).toContain(`postgres://my_app:my_app@localhost:${port}/my_app`);

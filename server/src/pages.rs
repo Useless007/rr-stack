@@ -41,6 +41,12 @@ pub fn check_upstream(url: &str) -> Result<(), String> {
     }
 }
 
+/// Built files. A prerendered page is `about/index.html`: serve it at `/about` itself, the URL its
+/// canonical link and the sitemap name, instead of redirecting to `/about/`.
+fn files(dist: PathBuf) -> ServeDir {
+    ServeDir::new(dist).redirect_to_trailing_slash(false)
+}
+
 pub fn serve(router: Router, pages: Pages) -> Router {
     match pages {
         Pages::Spa(dist) => {
@@ -51,12 +57,12 @@ pub fn serve(router: Router, pages: Pages) -> Router {
                     shell.display()
                 );
             }
-            router.fallback_service(ServeDir::new(dist).fallback(ServeFile::new(shell)))
+            router.fallback_service(files(dist).fallback(ServeFile::new(shell)))
         }
         Pages::Ssr { dist, upstream } => {
             let render = any(proxy).with_state(Upstream::new(upstream));
             // Form posts to a page (React Router actions) must reach the renderer too.
-            let files = ServeDir::new(dist).call_fallback_on_method_not_allowed(true);
+            let files = files(dist).call_fallback_on_method_not_allowed(true);
             router.fallback_service(files.fallback(render))
         }
     }

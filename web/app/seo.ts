@@ -10,7 +10,10 @@ declare global {
 /** Pages search engines should find: prerendered (react-router.config.ts) and listed in /sitemap.xml. */
 export const publicPages = ["/", "/how-it-works", "/api-reference"];
 
-/** Absolute URL on this site. Read inside a function: react-router.config.ts imports this file without Vite. */
+// react-router.config.ts imports this file outside Vite: keep imports type-only and relative (no
+// `~/`), and read import.meta.env only inside functions.
+
+/** Absolute URL on this site. */
 export const siteUrl = (path: string) => new URL(path, import.meta.env.SITE_URL).href;
 
 /** Title, description, canonical link and share card (Open Graph, which X and LinkedIn also read). */

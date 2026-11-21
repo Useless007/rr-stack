@@ -68,8 +68,9 @@ one has a test.
 
 - Want a component library? `--astryx` builds the app pages with
   [Astryx](https://github.com/meta/astryx), Meta's React design system (beta), on top of Tailwind.
-- Search engines need a page? Add its path to `prerender` in `web/react-router.config.ts` and it
-  ships as static HTML. Pages with per-visitor data in their first HTML: create the app with
+- Search engines need a page? Add its path to `publicPages` in `web/app/seo.ts` and return
+  `seo(...)` from its `meta`: it ships as static HTML with a canonical link and a share card, and is
+  listed in `sitemap.xml`. Pages with per-visitor data in their first HTML: create the app with
   `--ssr`, and a route's `loader` runs on the server (the todo page is the example).
 - Already have a backend in another language? The web half only reads `openapi.json`, so any
   backend that publishes an OpenAPI spec can drive the same generated client and hooks.

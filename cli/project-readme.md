@@ -120,8 +120,8 @@ Dockerfile, compose.yml  docker compose up -d runs everything
 
 `web/react-router.config.ts` says which mode this project uses.
 
-**`ssr: false` (default).** Paths in `prerender` are rendered to HTML at build time, so search
-engines see their content. Every other route is a SPA behind the same server, and deep links work
+**`ssr: false` (default).** Paths in `prerender` (the public pages in `web/app/seo.ts`) are
+rendered to HTML at build time, so search engines see their content. Every other route is a SPA behind the same server, and deep links work
 because Axum falls back to the SPA shell. A prerendered page can use data that exists at build time
 (see `/api-reference`), but cannot call the API while building.
 
@@ -140,11 +140,13 @@ In both modes unknown `/api/*` paths return a JSON 404, never HTML.
 Public pages are listed in `publicPages` in `web/app/seo.ts`. Each one is prerendered, listed in
 `/sitemap.xml`, and gets a description, a canonical link and an Open Graph card with
 `web/public/og.png` (replace it with your own 1200×630 image). `/robots.txt` points crawlers at the
-sitemap. Playground pages, `/sign-in` and the 404 page carry `noindex`; with `--ssr` an unknown path
-also answers with status 404.
+sitemap. Playground pages, `/sign-in` and the 404 page carry `noindex`. With `--ssr` an unknown path
+also answers with status 404; without it, the server cannot know which paths the SPA handles, so it
+answers 200 and the 404 page adds `noindex` once it runs (what Google asks of single-page apps).
 
 These URLs are absolute, so set `SITE_URL` (for example `https://example.com`) in `.env` before
-building for production. `docker compose` passes it into the image build.
+building for production. `bun run build` reads it from there, and `docker compose` passes it into
+the image build.
 
 ## UI components
 

@@ -63,11 +63,11 @@ try {
   };
 
   if (!(await expect("/", 200)).body.includes("typed from the database to the screen")) fail("smoke FAIL: / is not the prerendered landing page");
-  if (!(await expect("/api-reference/", 200)).body.includes("/api/todos/{id}")) fail("smoke FAIL: /api-reference was not prerendered from openapi.json");
+  if (!(await expect("/api-reference", 200)).body.includes("/api/todos/{id}")) fail("smoke FAIL: /api-reference was not prerendered from openapi.json");
   if (!(await expect("/app/todos", 200)).body.includes("<script")) fail(`smoke FAIL: /app/todos did not return ${ssr ? "a rendered page" : "the SPA shell"}`);
   if (!(await expect("/api/nope", 404)).type.startsWith("application/json")) fail("smoke FAIL: /api/nope is not JSON");
   // SEO: public pages carry canonical and share tags, and crawlers find them through the sitemap.
-  const home = (await expect("/how-it-works/", 200)).body;
+  const home = (await expect("/how-it-works", 200)).body;
   if (!/<link rel="canonical" href="https?:\/\/[^"]+\/how-it-works"/.test(home) || !home.includes('property="og:image"')) fail("smoke FAIL: /how-it-works has no canonical link or og:image");
   if (!(await expect("/sitemap.xml", 200)).body.includes("/how-it-works</loc>")) fail("smoke FAIL: /sitemap.xml does not list /how-it-works");
   if (!(await expect("/robots.txt", 200)).body.includes("Sitemap: ")) fail("smoke FAIL: /robots.txt does not point at the sitemap");

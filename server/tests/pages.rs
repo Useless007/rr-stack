@@ -16,6 +16,8 @@ fn dist(test: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("rr-pages-{}-{test}", std::process::id()));
     std::fs::create_dir_all(dir.join("assets")).unwrap();
     std::fs::write(dir.join("index.html"), "prerendered home").unwrap();
+    std::fs::create_dir_all(dir.join("about")).unwrap();
+    std::fs::write(dir.join("about/index.html"), "prerendered about").unwrap();
     std::fs::write(dir.join("assets/app.js"), "asset").unwrap();
     std::fs::write(dir.join("__spa-fallback.html"), "spa shell").unwrap();
     dir
@@ -57,6 +59,11 @@ async fn spa_mode_serves_files_then_the_shell(db: PgPool) {
     let app = app(AppState::new(db), Some(Pages::Spa(dist("spa"))));
     assert_eq!(get(app.clone(), at("/")).await.1, "prerendered home");
     assert_eq!(get(app.clone(), at("/assets/app.js")).await.1, "asset");
+    // The canonical URL has no trailing slash: it is the page, not a redirect to `/about/`.
+    assert_eq!(
+        get(app.clone(), at("/about")).await,
+        (StatusCode::OK, "prerendered about".into())
+    );
     assert_eq!(get(app, at("/app/todos/7")).await.1, "spa shell");
 }
 
@@ -71,6 +78,10 @@ async fn ssr_mode_sends_other_paths_to_the_renderer(db: PgPool) {
     // Built files still come straight from disk.
     assert_eq!(get(app.clone(), at("/")).await.1, "prerendered home");
     assert_eq!(get(app.clone(), at("/assets/app.js")).await.1, "asset");
+    assert_eq!(
+        get(app.clone(), at("/about")).await,
+        (StatusCode::OK, "prerendered about".into())
+    );
 
     // Everything else is rendered, with the path, query and session cookie intact.
     let req = Request::get("/app/todos/7?tab=open")

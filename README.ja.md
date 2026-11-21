@@ -69,8 +69,9 @@ CI で再生成されないクライアントや、`/api/typo` に HTML を返�
 
 - コンポーネントライブラリが欲しい場合は `--astryx` を付けると、アプリのページが
   [Astryx](https://github.com/meta/astryx)（Meta の React デザインシステム、beta）で作られ、Tailwind と併用されます。
-- 検索エンジンに見せたいページは、`web/react-router.config.ts` の `prerender` にパスを追加すれば
-  静的 HTML として配信されます。最初の HTML に訪問者ごとのデータを入れたい場合は `--ssr` でアプリを
+- 検索エンジンに見せたいページは、`web/app/seo.ts` の `publicPages` にパスを追加し、`meta` から
+  `seo(...)` を返します。canonical と共有カード付きの静的 HTML として配信され、`sitemap.xml` にも
+  載ります。最初の HTML に訪問者ごとのデータを入れたい場合は `--ssr` でアプリを
   作ると、ルートの `loader` がサーバーで実行されます（todo ページが例です）。
 - 別の言語のバックエンドがすでにある場合も、Web 側が読むのは `openapi.json` だけです。OpenAPI spec を
   出せるバックエンドなら、同じ生成クライアントと hooks を使えます。

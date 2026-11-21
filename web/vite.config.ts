@@ -1,12 +1,19 @@
 import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 
-// Baked into canonical links, share cards, robots.txt and sitemap.xml when the pages are built.
-const siteUrl = new URL(process.env.SITE_URL || "http://localhost:3000").origin;
+// SITE_URL is baked into canonical links, share cards, robots.txt and sitemap.xml when the pages are
+// built. Read from the environment first, then the project's .env (one folder up).
+function siteUrl(mode: string): string {
+  const value = loadEnv(mode, "..", "SITE_URL").SITE_URL || "http://localhost:3000";
+  if (!URL.canParse(value) || !/^https?:$/.test(new URL(value).protocol)) {
+    throw new Error(`SITE_URL must look like https://example.com, got "${value}"`);
+  }
+  return new URL(value).origin;
+}
 
-export default defineConfig({
-  define: { "import.meta.env.SITE_URL": JSON.stringify(siteUrl) },
+export default defineConfig(({ mode }) => ({
+  define: { "import.meta.env.SITE_URL": JSON.stringify(siteUrl(mode)) },
   plugins: [tailwindcss(), reactRouter()],
   resolve: {
     tsconfigPaths: true,
@@ -19,4 +26,4 @@ export default defineConfig({
     // api-reference imports ../openapi.json at build time.
     fs: { allow: [".."] },
   },
-});
+}));

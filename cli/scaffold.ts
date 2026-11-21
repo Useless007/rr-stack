@@ -125,7 +125,7 @@ export async function scaffold(opts: { name: string; dest: string; source: strin
     ["http://localhost:8000", `http://localhost:${app}`],
   ];
   await edit(join(dest, "compose.yml"), (s) =>
-    composeSwaps.reduce((text, [from, to]) => text.replace(from, to), must(s, composeSwaps.map(([from]) => from))),
+    composeSwaps.reduce((text, [from, to]) => text.replaceAll(from, to), must(s, composeSwaps.map(([from]) => from))),
   );
   const dbUrl = "postgres://rr:rr@localhost:5432/rr";
   await edit(join(dest, ".env.example"), (s) =>
