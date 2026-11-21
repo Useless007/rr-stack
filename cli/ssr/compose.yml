@@ -18,7 +18,10 @@ services:
 
   # The public entry: /api, built files, and every other path forwarded to `web`.
   app:
-    build: .
+    build:
+      context: .
+      args:
+        SITE_URL: ${SITE_URL:-http://localhost:8000}
     environment:
       DATABASE_URL: postgres://rr:rr@db:5432/rr
       WEB_SSR_URL: http://web:3001
@@ -34,7 +37,10 @@ services:
 
   # Renders pages. Not published: only `app` talks to it, and its loaders call `app` directly.
   web:
-    build: .
+    build:
+      context: .
+      args:
+        SITE_URL: ${SITE_URL:-http://localhost:8000}
     command: ["bun", "/app/web/server.ts"]
     environment:
       WEB_HOST: 0.0.0.0

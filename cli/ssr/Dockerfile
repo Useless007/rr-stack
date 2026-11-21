@@ -6,6 +6,8 @@ COPY openapi.json ./
 COPY web/package.json web/bun.lock web/
 RUN cd web && bun install --frozen-lockfile
 COPY web web
+# The public address, baked into canonical links, share cards and sitemap.xml (see .env.example).
+ARG SITE_URL
 # The renderer needs only runtime dependencies next to the build.
 RUN cd web && bun run build && rm -rf node_modules && bun install --frozen-lockfile --production
 

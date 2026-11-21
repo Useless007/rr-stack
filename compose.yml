@@ -17,7 +17,10 @@ services:
       retries: 30
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        SITE_URL: ${SITE_URL:-http://localhost:8000}
     environment:
       DATABASE_URL: postgres://rr:rr@db:5432/rr
       # Secure cookies work on http://localhost. Set "false" only to reach this over plain HTTP from

@@ -1,8 +1,13 @@
 import { ApiStatus, useApiState } from "~/components/api-status";
 import type { Route } from "./+types/how-it-works";
+import { seo } from "~/seo";
 
 export function meta({}: Route.MetaArgs) {
-  return [{ title: "How it works · RR stack" }];
+  return seo({
+    title: "How it works · RR stack",
+    description: "Postgres, the Rust API, openapi.json and React: four layers, each generated from or checked against the one before it.",
+    path: "/how-it-works",
+  });
 }
 
 const layers = [

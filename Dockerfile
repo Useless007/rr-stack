@@ -5,6 +5,8 @@ COPY openapi.json ./
 COPY web/package.json web/bun.lock web/
 RUN cd web && bun install --frozen-lockfile
 COPY web web
+# The public address, baked into canonical links, share cards and sitemap.xml (see .env.example).
+ARG SITE_URL
 RUN cd web && bun run build
 
 FROM rust:1-slim-bookworm AS server

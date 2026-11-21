@@ -51,6 +51,7 @@ AI agent 引入的大多数 bug，本质上是两层之间不一致：改了列�
 | 在 CI 和 Docker 中无需数据库就能构建 Rust | 已提交的 `.sqlx/` 离线查询元数据 |
 | 对错误输入和未知路由返回带类型的 JSON，而不是纯文本 | `AppJson`、`AppPath`、`AppQuery` 以及 JSON 404/405 |
 | 用一个二进制同时提供预渲染页面、SPA 和 API | 带 SPA fallback 的 Axum；深层链接有测试 |
+| 让搜索引擎找到，分享时显示卡片 | canonical 链接、Open Graph 卡片、`sitemap.xml` 和 `robots.txt` 都来自同一份公开页面列表；私有页面带 `noindex`；`--ssr` 返回真正的 404 |
 | 在 Windows 和 Linux 上使用同一套命令 | bun 脚本、LF 换行、两个系统都跑 CI |
 | 告诉 AI agent 什么叫"完成"、哪些文件不能动 | `AGENTS.md` 和一条检查命令 |
 | 默认安全的登录 | Argon2id 哈希、HttpOnly SameSite cookie、只存哈希的会话令牌、在 SQL 中检查所有者 |

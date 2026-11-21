@@ -1,7 +1,8 @@
 import { Link } from "react-router";
+import { noindex } from "~/seo";
 
 export function meta() {
-  return [{ title: "Page not found · RR stack" }];
+  return [{ title: "Page not found · RR stack" }, noindex];
 }
 
 export default function NotFound() {

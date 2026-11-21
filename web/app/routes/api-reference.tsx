@@ -1,8 +1,13 @@
 import spec from "../../../openapi.json";
 import type { Route } from "./+types/api-reference";
+import { seo } from "~/seo";
 
 export function meta({}: Route.MetaArgs) {
-  return [{ title: "API reference · RR stack" }];
+  return seo({
+    title: "API reference · RR stack",
+    description: "Every endpoint of the RR stack API, read from openapi.json when the site was built.",
+    path: "/api-reference",
+  });
 }
 
 type Operation = {

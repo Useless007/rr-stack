@@ -47,11 +47,15 @@ They are generated. `bun run check` fails if they differ from a fresh generation
 - Keep Rust plain: no custom macros, no generic abstraction layers. A human must be able to
   debug it when you get stuck.
 - Rendering is set in `web/react-router.config.ts`. With `ssr: false` (the default), paths in
-  `prerender` become HTML at build time and every other route is SPA: add a public page that search
-  engines must see to `prerender`. With `ssr: true` (apps created with `--ssr`), every route renders
+  `prerender` become HTML at build time and every other route is SPA. With `ssr: true` (apps created with `--ssr`), every route renders
   on the server in `web/server.ts`. Give a page its first-load data with a `loader` that calls the
   generated SDK with `baseUrl: process.env.API_URL` and the request's `cookie` header (see
   `web/app/routes/todo.tsx` in such an app).
+- SEO lives in `web/app/seo.ts`. A public page that search engines must find: add its path to
+  `publicPages` (that prerenders it and lists it in `/sitemap.xml`) and return
+  `seo({ title, description, path })` from its `meta`. A page behind sign-in or with private data
+  gets `noindex` in its `meta` (pages under `routes/playground-layout.tsx` already have it).
+  Absolute URLs come from `SITE_URL` at build time; never hard-code the domain.
 - New migration: a new numbered file. Never edit one that is committed.
 - Scripts in `scripts/` are TypeScript run by bun so they work on Windows, macOS and Linux.
   Do not add bash-only scripts or commands.

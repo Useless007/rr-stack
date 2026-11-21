@@ -2,12 +2,14 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { ApiStatus, useApiState } from "~/components/api-status";
 import type { Route } from "./+types/home";
+import { seo } from "~/seo";
 
 export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "RR stack: React Router and Rust, typed end to end" },
-    { name: "description", content: "A starter for apps that AI agents write and people review. One command tells you whether every layer agrees." },
-  ];
+  return seo({
+    title: "RR stack: React Router and Rust, typed end to end",
+    description: "A starter for apps that AI agents write and people review. One command tells you whether every layer agrees.",
+    path: "/",
+  });
 }
 
 const command = "bun create rr-stack my-app";

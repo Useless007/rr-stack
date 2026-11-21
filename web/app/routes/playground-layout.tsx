@@ -5,6 +5,8 @@ export default function PlaygroundLayout() {
   const live = useLiveTodos();
   return (
     <>
+      {/* Signed-in pages stay out of search results. React moves this tag into <head>. */}
+      <meta name="robots" content="noindex" />
       <div className="mt-16 flex flex-wrap items-baseline justify-between gap-4">
         <h1 className="text-4xl font-semibold tracking-tight">Playground</h1>
         <nav aria-label="Playground" className="flex gap-1 rounded-lg bg-ink/5 p-1 text-sm dark:bg-paper/10">

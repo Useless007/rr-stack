@@ -5,9 +5,10 @@ import { me } from "~/api";
 import { loginMutation, registerMutation } from "~/api/@tanstack/react-query.gen";
 import { errorMessage } from "~/lib/errors";
 import { safeNext } from "~/lib/safe-next";
+import { noindex } from "~/seo";
 
 export function meta() {
-  return [{ title: "Sign in · RR stack" }];
+  return [{ title: "Sign in · RR stack" }, noindex];
 }
 
 export default function SignIn() {

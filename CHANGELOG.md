@@ -3,6 +3,17 @@
 Versions are the `create-rr-stack` package on npm. A version changes what new projects start
 with; existing projects are not updated.
 
+## 0.6.0 (2026-11-22)
+
+- Search engines and share cards. Public pages are listed once, in `web/app/seo.ts`: each is
+  prerendered, listed in a generated `/sitemap.xml`, and gets a description, a canonical link and
+  an Open Graph card (`web/public/og.png`, a Rust crab holding the React logo). `/robots.txt` points
+  at the sitemap. Playground pages, `/sign-in` and the 404 page carry `noindex`. With `--ssr`, an
+  unknown path answers 404 instead of 200.
+- New `SITE_URL` setting (`.env`, passed into the Docker build by `docker compose`): the public
+  address these absolute URLs are built from.
+- Includes 0.5.1, which was not published on its own.
+
 ## 0.5.1 (2026-11-22)
 
 - The CLI starts on bun 1.1 again, so it can tell you to run `bun upgrade`. Before, bun older

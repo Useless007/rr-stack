@@ -66,6 +66,16 @@ try {
   if (!(await expect("/api-reference/", 200)).body.includes("/api/todos/{id}")) fail("smoke FAIL: /api-reference was not prerendered from openapi.json");
   if (!(await expect("/app/todos", 200)).body.includes("<script")) fail(`smoke FAIL: /app/todos did not return ${ssr ? "a rendered page" : "the SPA shell"}`);
   if (!(await expect("/api/nope", 404)).type.startsWith("application/json")) fail("smoke FAIL: /api/nope is not JSON");
+  // SEO: public pages carry canonical and share tags, and crawlers find them through the sitemap.
+  const home = (await expect("/how-it-works/", 200)).body;
+  if (!/<link rel="canonical" href="https?:\/\/[^"]+\/how-it-works"/.test(home) || !home.includes('property="og:image"')) fail("smoke FAIL: /how-it-works has no canonical link or og:image");
+  if (!(await expect("/sitemap.xml", 200)).body.includes("/how-it-works</loc>")) fail("smoke FAIL: /sitemap.xml does not list /how-it-works");
+  if (!(await expect("/robots.txt", 200)).body.includes("Sitemap: ")) fail("smoke FAIL: /robots.txt does not point at the sitemap");
+  if (!(await expect("/og.png", 200)).type.startsWith("image/png")) fail("smoke FAIL: /og.png is not served");
+  if (ssr) {
+    if (!(await expect("/app", 200)).body.includes('<meta name="robots" content="noindex"')) fail("smoke FAIL: /app can be indexed");
+    if (!(await expect("/no-such-page", 404)).body.includes('<meta name="robots" content="noindex"')) fail("smoke FAIL: /no-such-page can be indexed");
+  }
   // Realtime: a change made over HTTP must reach a WebSocket client.
   const ws = new WebSocket(`ws://127.0.0.1:${port}/api/events`);
   await new Promise((ok, no) => ((ws.onopen = ok), (ws.onerror = no)));

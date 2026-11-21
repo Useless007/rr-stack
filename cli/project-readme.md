@@ -38,6 +38,7 @@ will need:
 | `/app/todos/:id` | path params, edit, typed 404 from the API |
 | `/sign-in` | register and sign in: Argon2id, HttpOnly session cookie, owner-only edits (403) |
 | any other path | the app's 404 page |
+| `/robots.txt`, `/sitemap.xml` | generated at build time from the public pages |
 
 By default production is one process: Axum serves `/api/*` and the built pages, with no Node at
 runtime. A project created with `--ssr` adds one bun process that renders pages on each request;
@@ -100,7 +101,8 @@ server/migrations/       database schema (source of truth for tables)
 server/tests/            integration tests, each gets a fresh database (#[sqlx::test])
 web/app/routes.ts        page routes
 web/app/api/             GENERATED client, never edit by hand
-web/react-router.config.ts   prerender list: pages that search engines must see
+web/react-router.config.ts   rendering mode (ssr) and what is prerendered
+web/app/seo.ts           public pages, canonical links and share cards
 openapi.json             GENERATED contract, never edit by hand
 scripts/check.ts         definition of done (bun run check)
 Dockerfile, compose.yml  docker compose up -d runs everything
@@ -132,6 +134,17 @@ so `/app/todos/:id` arrives as HTML with the todo and its title in it. `prerende
 pages with no per-request data.
 
 In both modes unknown `/api/*` paths return a JSON 404, never HTML.
+
+## Search engines and share cards
+
+Public pages are listed in `publicPages` in `web/app/seo.ts`. Each one is prerendered, listed in
+`/sitemap.xml`, and gets a description, a canonical link and an Open Graph card with
+`web/public/og.png` (replace it with your own 1200×630 image). `/robots.txt` points crawlers at the
+sitemap. Playground pages, `/sign-in` and the 404 page carry `noindex`; with `--ssr` an unknown path
+also answers with status 404.
+
+These URLs are absolute, so set `SITE_URL` (for example `https://example.com`) in `.env` before
+building for production. `docker compose` passes it into the image build.
 
 ## UI components
 
