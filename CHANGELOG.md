@@ -3,7 +3,7 @@
 Versions are the `create-rr-stack` package on npm. A version changes what new projects start
 with; existing projects are not updated.
 
-## 0.5.0 (unreleased)
+## 0.5.0 (2026-11-21)
 
 - New question in the CLI, "Which UI components?": Tailwind (default) or Tailwind + Astryx. With
   `--astryx` the playground pages (`/app`, `/app/todos`, `/app/todos/:id`, `/sign-in`) are built
@@ -15,8 +15,6 @@ with; existing projects are not updated.
   `package.json`/`bun.lock` from the template's, and a test fails when they drift.
 - CI scaffolds and checks a `--astryx` app on Linux and Windows, and builds a `--ssr --astryx` app
   with `docker compose up -d`.
-
-
 - React Router runs on bun (`bun --bun react-router ...`), so Node is not needed at all and its
   "Node v20 detected" warning is gone. bun 1.4+ is required; `bun run dev`, `check` and `smoke`
   say `bun upgrade` when it is older, and the CLI warns up front.
