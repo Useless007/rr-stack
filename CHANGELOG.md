@@ -3,7 +3,7 @@
 Versions are the `create-rr-stack` package on npm. A version changes what new projects start
 with; existing projects are not updated.
 
-## 0.4.0 (unreleased)
+## 0.4.0 (2026-11-21)
 
 - `bun create rr-stack my-app --ssr` (or pick "Server rendering" in the prompt): every route renders
   on the server and hydrates. Axum stays the only public port and forwards page requests to a bun
@@ -13,8 +13,10 @@ with; existing projects are not updated.
   server and the renderer from one image. `bun run dev` and `bun run smoke` handle both modes; CI
   scaffolds an SSR app and runs its check, smoke test and Docker build.
 - The Rust server's page handling is `Pages::Spa` or `Pages::Ssr` (`server/src/pages.rs`), with tests
-  for files, the SPA shell, forwarding (path, query, cookie, form posts) and a 502 when the renderer
-  is down.
+  for files, the SPA shell, forwarding (path, query, cookie, form posts), hop-by-hop headers, CONNECT,
+  a 502 when the renderer is down and a 504 after 30 s. A malformed `WEB_SSR_URL` stops startup.
+- Dates on server-rendered pages show the ISO day until the page mounts, then the visitor's format,
+  so hydration works in every locale and time zone.
 - The CLI shows its version and warns when npm has a newer one. bun and npx cache the package,
   so a plain `bun create rr-stack` could quietly run an old template; the warning gives the
   `bun create rr-stack@latest <name>` command. Offline or slow registry: no warning, no delay
