@@ -58,7 +58,7 @@ jobs:
         shell: bash
         run: |
           cd "$RUNNER_TEMP"
-          bun "$GITHUB_WORKSPACE/cli/index.ts" ci-demo --yes --no-git
+          bun "$GITHUB_WORKSPACE/cli/index.ts" ci-demo --spa --tailwind --yes --no-git
           cd ci-demo
           SKIP_DB=1 bun run check
 
@@ -69,8 +69,19 @@ jobs:
           # This repo's database (Linux: from .env, Windows: from the step above), not the new app's.
           [ -n "${DATABASE_URL:-}" ] || export "$(grep '^DATABASE_URL=' "$GITHUB_WORKSPACE/.env")"
           cd "$RUNNER_TEMP"
-          bun "$GITHUB_WORKSPACE/cli/index.ts" ci-ssr --ssr --yes --no-git
+          bun "$GITHUB_WORKSPACE/cli/index.ts" ci-ssr --ssr --tailwind --yes --no-git
           cd ci-ssr
+          bun run check
+          bun run smoke
+
+      - name: scaffold a --astryx project, check it and smoke-test it
+        if: hashFiles('cli/package.json') != ''
+        shell: bash
+        run: |
+          [ -n "${DATABASE_URL:-}" ] || export "$(grep '^DATABASE_URL=' "$GITHUB_WORKSPACE/.env")"
+          cd "$RUNNER_TEMP"
+          bun "$GITHUB_WORKSPACE/cli/index.ts" ci-astryx --spa --astryx --yes --no-git
+          cd ci-astryx
           bun run check
           bun run smoke
 
@@ -101,11 +112,11 @@ jobs:
       - if: hashFiles('cli/package.json') != ''
         run: bun install --frozen-lockfile
         working-directory: cli
-      - name: a --ssr project's docker compose up -d renders pages with their data
+      - name: a --ssr --astryx project's docker compose up -d renders pages with their data
         if: hashFiles('cli/package.json') != ''
         run: |
           cd "$RUNNER_TEMP"
-          bun "$GITHUB_WORKSPACE/cli/index.ts" ssr-docker --ssr --yes --no-git --no-install
+          bun "$GITHUB_WORKSPACE/cli/index.ts" ssr-docker --ssr --astryx --yes --no-git --no-install
           cd ssr-docker
           docker compose up -d --build --wait
           url="http://$(docker compose port app 3000)"

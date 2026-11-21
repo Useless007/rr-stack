@@ -64,6 +64,8 @@ repo นี้ทำไว้ให้
 
 **ต่อยอดได้อีก**
 
+- อยากได้ชุด component สำเร็จรูป ใส่ `--astryx` แล้วหน้าแอปจะใช้ [Astryx](https://github.com/meta/astryx)
+  ซึ่งเป็น design system ของ React จาก Meta (beta) ทำงานคู่กับ Tailwind
 - อยากให้ search engine เห็นหน้าไหน ใส่ path ไว้ใน `prerender` ของ `web/react-router.config.ts`
   หน้านั้นจะออกมาเป็น HTML แบบ static ถ้าอยากให้ HTML แรกมีข้อมูลของแต่ละคน ให้สร้างแอปด้วย `--ssr`
   แล้ว `loader` ของ route จะรันฝั่ง server (หน้า todo คือตัวอย่าง)

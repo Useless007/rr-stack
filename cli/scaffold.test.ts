@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { ASTRYX, withAstryx } from "./astryx/sync";
 import { appPort, buildTemplate, dbPort, isOlder, scaffold, validateName } from "./scaffold";
 
 const repoRoot = resolve(import.meta.dir, "..");
@@ -38,7 +39,7 @@ describe("scaffold", () => {
 
   test("--ssr adds the renderer, a loader route and two-process Docker files, still renamed", async () => {
     const dest = freshDir();
-    await scaffold({ name: "demo", dest, source: template, ssr: join(import.meta.dir, "ssr") });
+    await scaffold({ name: "demo", dest, source: template, overlays: [join(import.meta.dir, "ssr")] });
     const read = (f: string) => readFileSync(join(dest, f), "utf8");
     expect(read("web/react-router.config.ts")).toContain("ssr: true");
     expect(existsSync(join(dest, "web/server.ts"))).toBeTrue();
@@ -49,6 +50,40 @@ describe("scaffold", () => {
     expect(compose).toContain("postgres://demo:demo@db:5432/demo");
     expect(compose).not.toContain("POSTGRES_USER: rr");
     expect(read("Dockerfile")).toContain("bun /app/web/server.ts");
+  });
+
+  test("--astryx swaps in the Astryx pages, styles and dependencies, and tells agents", async () => {
+    const dest = freshDir();
+    await scaffold({
+      name: "demo",
+      dest,
+      source: template,
+      overlays: [join(import.meta.dir, "astryx", "files")],
+      agentNotes: [join(import.meta.dir, "astryx", "AGENTS.astryx.md")],
+    });
+    const read = (f: string) => readFileSync(join(dest, f), "utf8");
+    const pkg = JSON.parse(read("web/package.json"));
+    expect(pkg.name).toBe("demo-web");
+    expect(pkg.dependencies["@astryxdesign/core"]).toBe(ASTRYX.dependencies["@astryxdesign/core"]);
+    expect(read("web/bun.lock")).toContain("@astryxdesign/core");
+    expect(read("web/app/ui.css")).toContain("@layer reset, theme, base, astryx-base");
+    expect(read("web/app/components/ui-provider.tsx")).toContain("neutralTheme");
+    expect(read("web/app/routes/todos.tsx")).toContain("@astryxdesign/core/List");
+    expect(read("AGENTS.md")).toContain("## UI components: Astryx");
+    for (const gone of ["sync.ts", "AGENTS.astryx.md", "files"]) expect(existsSync(join(dest, gone))).toBeFalse();
+  });
+
+  test("the Astryx overlay's package.json and lockfile match the template's (run bun cli/astryx/sync.ts)", () => {
+    const overlay = readFileSync(join(import.meta.dir, "astryx/files/web/package.json"), "utf8");
+    expect(overlay).toBe(withAstryx(readFileSync(join(repoRoot, "web/package.json"), "utf8")));
+    const lock = readFileSync(join(import.meta.dir, "astryx/files/web/bun.lock"), "utf8");
+    const template = JSON.parse(readFileSync(join(repoRoot, "web/package.json"), "utf8"));
+    // Every template dependency is locked at the same version as in the template's own lockfile.
+    const templateLock = readFileSync(join(repoRoot, "web/bun.lock"), "utf8");
+    for (const dep of Object.keys({ ...template.dependencies, ...template.devDependencies })) {
+      const entry = (text: string) => text.match(new RegExp(`\\n    "${dep.replace("/", "\\/")}": \\["([^"]+)"`))?.[1];
+      expect(entry(lock)).toBe(entry(templateLock));
+    }
   });
 
   test("without --ssr the project is prerender + SPA", async () => {

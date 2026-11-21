@@ -61,6 +61,18 @@ if (flags.has("--ssr") || flags.has("--spa")) {
 } else {
   ssr = interactive ? await ask(p.select({ message: renderQuestion, options: modes })) : false;
 }
+const uiKits = [
+  { value: false, label: "Tailwind", hint: "utility classes, nothing else to learn" },
+  { value: true, label: "Tailwind + Astryx", hint: "Meta's React design system (beta), 170+ components" },
+];
+const uiQuestion = "Which UI components?";
+let astryx: boolean;
+if (flags.has("--astryx") || flags.has("--tailwind")) {
+  astryx = flags.has("--astryx");
+  p.log.step(`${uiQuestion}\n${dim(uiKits.find((k) => k.value === astryx)!.label)}`);
+} else {
+  astryx = interactive ? await ask(p.select({ message: uiQuestion, options: uiKits })) : false;
+}
 const install = flags.has("--no-install") ? false : interactive ? await ask(p.confirm({ message: "Install the web dependencies now?" })) : true;
 const git = flags.has("--no-git") ? false : interactive ? await ask(p.confirm({ message: "Initialize a git repository?" })) : true;
 
@@ -84,7 +96,13 @@ try {
     source = join(mkdtempSync(join(tmpdir(), "rr-template-")), "t");
     await buildTemplate(resolve(import.meta.dir, ".."), source);
   }
-  await scaffold({ name, dest, source, ssr: ssr ? join(import.meta.dir, "ssr") : undefined });
+  await scaffold({
+    name,
+    dest,
+    source,
+    overlays: [...(ssr ? [join(import.meta.dir, "ssr")] : []), ...(astryx ? [join(import.meta.dir, "astryx", "files")] : [])],
+    agentNotes: astryx ? [join(import.meta.dir, "astryx", "AGENTS.astryx.md")] : [],
+  });
 } catch (err) {
   if (ownsDest) rmSync(dest, { recursive: true, force: true });
   spin.error("Could not create the project");
@@ -119,6 +137,7 @@ const where = relative(process.cwd(), dest) || ".";
 p.note(
   [
     `${dim(ssr ? "Server rendering: pages render in web/server.ts, data in route loaders" : "Prerender + SPA: one Rust binary serves the API and the pages")}`,
+    ...(astryx ? [`${dim("Astryx: bun run astryx component <Name> in web/ shows a component's props")}`] : []),
     "",
     `${cyan("cd")} ${where}`,
     `${cyan("bun run dev")}      ${dim("Postgres, the Rust API and the app, together")}`,

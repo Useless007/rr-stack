@@ -65,6 +65,8 @@ one has a test.
 
 **Going further.**
 
+- Want a component library? `--astryx` builds the app pages with
+  [Astryx](https://github.com/meta/astryx), Meta's React design system (beta), on top of Tailwind.
 - Search engines need a page? Add its path to `prerender` in `web/react-router.config.ts` and it
   ships as static HTML. Pages with per-visitor data in their first HTML: create the app with
   `--ssr`, and a route's `loader` runs on the server (the todo page is the example).

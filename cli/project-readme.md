@@ -133,6 +133,13 @@ pages with no per-request data.
 
 In both modes unknown `/api/*` paths return a JSON 404, never HTML.
 
+## UI components
+
+`bun create rr-stack my-app --astryx` (or "Tailwind + Astryx" in the prompt) builds the playground
+pages with [Astryx](https://github.com/meta/astryx), Meta's React design system (beta), layered under
+Tailwind; the other pages stay plain Tailwind. Such an app has `bun run astryx` in `web/` for
+component docs, and AGENTS.md says how to use it. Without the flag every page is plain Tailwind.
+
 ## Production
 
 The `Dockerfile` builds one image with the server and the pages (with `--ssr`, also the renderer;

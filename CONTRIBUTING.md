@@ -34,6 +34,8 @@ created after the next release, so treat files outside `cli/` as public API.
 | A file the CLI renames (`compose.yml`, `.env.example`, `Cargo.toml`, `package.json`) | `bun test` in `cli/`; `scaffold.ts` fails loudly if a string it replaces has moved |
 | `cli/project-readme.md` | it becomes the README of every new project |
 | `README.md` | update the translations, or list the stale ones in the PR |
+| `web/package.json` or `web/bun.lock` | `bun cli/astryx/sync.ts`, so `--astryx` apps get the same versions plus Astryx |
+| A playground page (`todos`, `todo-page`, `dashboard`, `sign-in`) | the same change in `cli/astryx/files/`; CI checks both |
 
 ## Before you open a pull request
 

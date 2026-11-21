@@ -62,6 +62,8 @@ AI agent 引入的大多数 bug，本质上是两层之间不一致：改了列�
 
 **进一步扩展**
 
+- 想要现成的组件库？加上 `--astryx`，应用页面会用 [Astryx](https://github.com/meta/astryx)
+  （Meta 的 React 设计系统，beta）构建，与 Tailwind 一起使用。
 - 想让搜索引擎看到某个页面？把它的路径加到 `web/react-router.config.ts` 的 `prerender` 里，它就会
   以静态 HTML 发布。需要首屏 HTML 就带上每个访客的数据？用 `--ssr` 创建应用，路由的 `loader` 会在
   服务端运行（todo 页面就是示例）。

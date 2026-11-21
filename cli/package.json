@@ -1,6 +1,6 @@
 {
   "name": "create-rr-stack",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "type": "module",
   "bin": {
     "create-rr-stack": "index.ts"
@@ -32,6 +32,8 @@
     "index.ts",
     "scaffold.ts",
     "ssr",
+    "astryx/files",
+    "astryx/AGENTS.astryx.md",
     "template"
   ],
   "dependencies": {

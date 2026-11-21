@@ -76,15 +76,16 @@ export async function buildTemplate(repo: string, out: string): Promise<void> {
 }
 
 /**
- * Copies `source` into `dest` and renames it for `name`. `ssr` is the dir of files that replace or
- * join the template for `ssr: true` apps (cli/ssr): the renderer, a loader route, Docker files.
+ * Copies `source` into `dest` and renames it for `name`. Each overlay is a dir of files that replace
+ * or join the template, applied in order: cli/ssr (renderer, loader route, Docker files) and
+ * cli/astryx/files (Astryx pages, provider, styles, dependencies). `agentNotes` are appended to AGENTS.md.
  */
-export async function scaffold(opts: { name: string; dest: string; source: string; ssr?: string }): Promise<void> {
-  const { name, dest, source, ssr } = opts;
+export async function scaffold(opts: { name: string; dest: string; source: string; overlays?: string[]; agentNotes?: string[] }): Promise<void> {
+  const { name, dest, source, overlays = [], agentNotes = [] } = opts;
   const existing = await readdir(dest).catch(() => []);
   if (existing.length > 0) throw new Error(`${dest} is not empty`);
 
-  for (const dir of ssr ? [source, ssr] : [source]) {
+  for (const dir of [source, ...overlays]) {
     for (const file of await readdir(dir, { recursive: true, withFileTypes: true })) {
       if (!file.isFile()) continue;
       const from = join(file.parentPath, file.name);
@@ -131,6 +132,10 @@ export async function scaffold(opts: { name: string; dest: string; source: strin
     must(s, [dbUrl]).replace(dbUrl, `postgres://${db}:${db}@localhost:${port}/${db}`),
   );
   await writeFile(join(dest, ".env"), await readFile(join(dest, ".env.example"), "utf8"));
+  for (const notes of agentNotes) {
+    const extra = await readFile(notes, "utf8");
+    await edit(join(dest, "AGENTS.md"), (s) => s.replace(/\n*$/, "\n") + extra);
+  }
 }
 
 async function edit(path: string, change: (text: string) => string): Promise<void> {

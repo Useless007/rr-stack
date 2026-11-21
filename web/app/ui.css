@@ -1,0 +1,2 @@
+/* The styling base. `--astryx` apps replace this file with Astryx's styles layered under Tailwind. */
+@import "tailwindcss";
