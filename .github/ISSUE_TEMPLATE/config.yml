@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Read CONTRIBUTING.md first
+    url: https://github.com/Useless007/rr-stack/blob/main/CONTRIBUTING.md
+    about: How the repo is laid out and what to run before a PR.

@@ -26,7 +26,8 @@ export function appPort(name: string): number {
 
 // Tracked in the template repo but not part of a new project: the CLI, and the repo's own
 // docs for contributors (README in every language, CONTRIBUTING, the template's license).
-const SKIP_TOP = new Set(["cli", "docs", "CONTRIBUTING.md", "LICENSE"]);
+const SKIP_TOP = new Set(["cli", "docs", "CONTRIBUTING.md", "LICENSE", "CHANGELOG.md", "SECURITY.md"]);
+const SKIP_PATHS = [".github/ISSUE_TEMPLATE/", ".github/pull_request_template.md"];
 const isRepoReadme = (file: string) => /^README(\.[\w-]+)?\.md$/.test(file);
 // npm never ships files named .gitignore, so the template stores them under this name.
 const GITIGNORE = "_gitignore";
@@ -35,7 +36,14 @@ const GITIGNORE = "_gitignore";
 export async function buildTemplate(repo: string, out: string): Promise<void> {
   const files = execFileSync("git", ["ls-files", "-z"], { cwd: repo, encoding: "utf8" })
     .split("\0")
-    .filter((f) => f && !SKIP_TOP.has(f.split("/")[0] ?? "") && !isRepoReadme(f) && existsSync(join(repo, f)));
+    .filter(
+      (f) =>
+        f &&
+        !SKIP_TOP.has(f.split("/")[0] ?? "") &&
+        !SKIP_PATHS.some((p) => f.startsWith(p)) &&
+        !isRepoReadme(f) &&
+        existsSync(join(repo, f)),
+    );
   for (const file of files) {
     const target = join(out, file.replace(/(^|\/)\.gitignore$/, `$1${GITIGNORE}`));
     await mkdir(dirname(target), { recursive: true });

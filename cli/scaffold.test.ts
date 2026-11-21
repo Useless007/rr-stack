@@ -105,7 +105,7 @@ describe("scaffold", () => {
   test("gives a project its own README, not the repo's contributor docs", async () => {
     const dest = freshDir();
     await scaffold({ name: "demo", dest, source: template });
-    for (const gone of ["CONTRIBUTING.md", "README.th.md", "README.zh-CN.md", "README.ja.md", "LICENSE"]) {
+    for (const gone of ["CONTRIBUTING.md", "README.th.md", "README.zh-CN.md", "README.ja.md", "LICENSE", "CHANGELOG.md", "SECURITY.md", ".github/ISSUE_TEMPLATE", ".github/pull_request_template.md"]) {
       expect(existsSync(join(dest, gone))).toBeFalse();
     }
     const readme = readFileSync(join(dest, "README.md"), "utf8");

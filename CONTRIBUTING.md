@@ -61,5 +61,6 @@ output. For a bug in a generated project, say which `create-rr-stack` version cr
 
 ## Releases
 
-Maintainers release from `main`: bump `version` in `cli/package.json`, tag `vX.Y.Z`, and
+Maintainers release from `main`: add the changes to `CHANGELOG.md`, bump `version` in
+`cli/package.json`, tag `vX.Y.Z`, and
 `npm publish` in `cli/`. The `prepack` script bundles the template.
