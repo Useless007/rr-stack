@@ -39,6 +39,11 @@ export function need(tool: string, install: string): void {
   if (!Bun.which(tool)) fail(`${tool} is not installed. Install it with: ${install}`);
 }
 
+/** True when sqlx-cli is installed. Asks cargo, which also finds it in ~/.cargo/bin when that is not on PATH. */
+export async function hasSqlx(): Promise<boolean> {
+  return (await $`cargo sqlx --version`.quiet().nothrow()).exitCode === 0;
+}
+
 /** Runs a shell command; on failure prints its captured output and exits 1. */
 export async function run(cmd: ReturnType<typeof $>, quiet = false): Promise<string> {
   try {

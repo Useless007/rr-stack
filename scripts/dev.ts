@@ -1,13 +1,25 @@
 // One command for local development: Postgres in Docker, the Rust API, and the Vite dev server.
 import { $ } from "bun";
 import { styleText } from "node:util";
-import { bun, fail, loadEnv, serverDir, webDir } from "./lib";
+import { bun, fail, hasSqlx, loadEnv, run, serverDir, webDir } from "./lib";
 
 loadEnv();
 try {
   await $`docker compose up -d --wait db`.quiet();
 } catch {
   fail("could not start Postgres with Docker. Is Docker running? (docker compose up -d --wait db)");
+}
+
+// query! checks SQL against the live database at compile time, so the schema must be current
+// before cargo builds; the server's own migrate step only runs after it compiles.
+if (await hasSqlx()) {
+  await run($`cargo sqlx migrate run`.cwd(serverDir), true);
+} else {
+  process.env.SQLX_OFFLINE = "true";
+  console.log(
+    "sqlx-cli not found: building from server/.sqlx. Install it to check new SQL against the database:\n" +
+      "  cargo install sqlx-cli --no-default-features --features postgres,rustls",
+  );
 }
 
 const apiPort = process.env.PORT ?? "3000";
@@ -21,7 +33,7 @@ console.log(`
 `);
 
 const children = [
-  Bun.spawn(["cargo", "run", "-q", "--bin", "server"], { cwd: serverDir, stdio: ["inherit", "inherit", "inherit"] }),
+  Bun.spawn(["cargo", "run", "-q", "--bin", "server"], { cwd: serverDir, env: process.env, stdio: ["inherit", "inherit", "inherit"] }),
   Bun.spawn([bun, "run", "dev"], { cwd: webDir, stdio: ["inherit", "inherit", "inherit"] }),
 ];
 const stop = () => {

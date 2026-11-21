@@ -3,6 +3,14 @@
 Versions are the `create-rr-stack` package on npm. A version changes what new projects start
 with; existing projects are not updated.
 
+## 0.3.2 (unreleased)
+
+- `bun run dev` applies migrations before it compiles the server. A new database, or one left
+  by an older project with the same name, failed with `relation "sessions" does not exist`.
+  Without sqlx-cli it builds from `server/.sqlx` instead.
+- `bun run dev` and `bun run check` find sqlx-cli through cargo, so it works when
+  `~/.cargo/bin` is not on PATH.
+
 ## 0.3.1 (2026-11-21)
 
 - The npm page's links to the translated READMEs, CONTRIBUTING and LICENSE open on GitHub

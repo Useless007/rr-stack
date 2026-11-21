@@ -4,13 +4,13 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { generate } from "./gen";
-import { bun, fail, loadEnv, need, onExit, root, run, serverDir, step, treeDiff, webDir } from "./lib";
+import { bun, fail, hasSqlx, loadEnv, need, onExit, root, run, serverDir, step, treeDiff, webDir } from "./lib";
 
 loadEnv();
 process.env.SQLX_OFFLINE = "true";
 need("cargo", "https://rustup.rs");
 const skipDb = process.env.SKIP_DB === "1";
-if (!skipDb) need("sqlx", "cargo install sqlx-cli --no-default-features --features postgres,rustls");
+if (!skipDb && !(await hasSqlx())) fail("sqlx-cli is not installed. Install it with: cargo install sqlx-cli --no-default-features --features postgres,rustls");
 
 step("rustfmt");
 await run($`cargo fmt --check`.cwd(serverDir));
@@ -40,7 +40,7 @@ if (skipDb) {
   console.log("SKIP_DB=1: skipped .sqlx check and tests. This is NOT done.");
 } else if (process.env.DATABASE_URL) {
   step("migrations + .sqlx/ up to date");
-  await run($`sqlx migrate run`.cwd(serverDir), true);
+  await run($`cargo sqlx migrate run`.cwd(serverDir), true);
   await run($`cargo sqlx prepare --check -- --all-targets`.cwd(serverDir));
   step("tests");
   await run($`cargo test -q`.cwd(serverDir));
