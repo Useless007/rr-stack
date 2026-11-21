@@ -116,11 +116,11 @@ export async function scaffold(opts: { name: string; dest: string; source: strin
   const app = appPort(name);
   const composeSwaps: [string, string][] = [
     ["POSTGRES_USER: rr", `POSTGRES_USER: ${db}`],
-    ["POSTGRES_PASSWORD: rr", `POSTGRES_PASSWORD: ${db}`],
+    ["POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rr}", `POSTGRES_PASSWORD: \${POSTGRES_PASSWORD:-${db}}`],
     ["POSTGRES_DB: rr", `POSTGRES_DB: ${db}`],
     ["pg_isready -U rr", `pg_isready -U ${db}`],
     ["127.0.0.1:5432:5432", `127.0.0.1:${port}:5432`],
-    ["postgres://rr:rr@db:5432/rr", `postgres://${db}:${db}@db:5432/${db}`],
+    ["postgres://rr:${POSTGRES_PASSWORD:-rr}@db:5432/rr", `postgres://${db}:\${POSTGRES_PASSWORD:-${db}}@db:5432/${db}`],
     ["127.0.0.1:8000:3000", `127.0.0.1:${app}:3000`],
     ["http://localhost:8000", `http://localhost:${app}`],
   ];

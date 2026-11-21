@@ -21,6 +21,11 @@ with; existing projects are not updated.
   leave screenshots in `web/e2e/results/`. Chromium downloads on the first run. CI runs it on Linux
   and Windows and for `--ssr` and `--astryx` apps. AGENTS.md tells agents to run it after any page
   change.
+- Production on one server: `compose.prod.yml` adds Caddy in front (HTTPS with automatic
+  certificates, http redirected), requires `SITE_URL` and a real `POSTGRES_PASSWORD`, closes the
+  app and database ports, and sets `TRUST_PROXY`. `DEPLOY.md` covers the first deploy, updates,
+  backups, restores and what to check when it fails. `compose.yml` now takes the database password
+  from `POSTGRES_PASSWORD` too, defaulting to the old value.
 - Includes 0.5.1, which was not published on its own.
 
 ## 0.5.1 (2026-11-22)

@@ -114,6 +114,19 @@ jobs:
             | grep -i '^set-cookie:' | sed -E 's/^[^:]+: *([^;]+).*/\1/' | tr -d '\r')
           test -n "$session"
           curl -fsS -H "cookie: $session" -X POST -H 'content-type: application/json' -d '{"title":"from docker"}' "$url/api/todos"
+      - name: compose.prod.yml serves it over HTTPS through Caddy
+        env:
+          SITE_URL: https://localhost
+          POSTGRES_PASSWORD: ciprodpassword
+        run: |
+          # A fresh database: the one above was created with the local password.
+          docker compose down -v
+          docker compose -f compose.yml -f compose.prod.yml up -d --build --wait
+          curl -fsSk --retry 30 --retry-all-errors --retry-delay 1 https://localhost/api/health
+          curl -fsSk https://localhost/sitemap.xml | grep -q "<loc>https://localhost/how-it-works</loc>"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost/)" = 308
+          # Only Caddy is reachable from outside.
+          test -z "$(docker compose -f compose.yml -f compose.prod.yml port app 3000 2>/dev/null)"
 
   docker-ssr:
     strategy:

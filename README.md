@@ -55,6 +55,7 @@ and the glue is what this repo is:
 | Serve prerendered pages, a SPA and the API from one binary | Axum with a SPA fallback; deep links are tested |
 | Be found by search engines and look right when shared | canonical links, Open Graph card, `sitemap.xml` and `robots.txt` from one list of public pages; `noindex` on private pages; real 404s with `--ssr` |
 | Check pages in a real browser, not only that they compile | `bun run e2e`: Playwright on bun (no Node) opens every page and walks sign-up to delete; any JS error, hydration mismatch or 5xx fails it, with screenshots |
+| Put it on a server with HTTPS | `compose.prod.yml` adds Caddy (automatic certificates) and closes every port but 80 and 443; [DEPLOY.md](https://github.com/Useless007/rr-stack/blob/main/DEPLOY.md) covers updates and backups |
 | Use the same commands on Windows and Linux | bun scripts, LF line endings, CI on both |
 | Tell an AI agent what "done" means and what not to touch | `AGENTS.md` and one check command |
 | Sign-in that is safe by default | Argon2id hashes, HttpOnly SameSite cookie, hashed session tokens, owner checks in SQL |

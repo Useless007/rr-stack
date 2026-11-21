@@ -158,6 +158,12 @@ component docs, and AGENTS.md says how to use it. Without the flag every page is
 
 ## Production
 
+On one server with Docker and a domain: put `SITE_URL`, `POSTGRES_PASSWORD` and
+`COMPOSE_FILE=compose.yml:compose.prod.yml` in `.env`, then `docker compose up -d --build`. Caddy
+serves it over HTTPS with a certificate it renews itself, and only ports 80 and 443 are open.
+[DEPLOY.md](DEPLOY.md) has the steps, updates, backups and what to check when it fails.
+
+To run it another way:
 The `Dockerfile` builds one image with the server and the pages (with `--ssr`, also the renderer;
 `compose.yml` runs it twice, as `app` and `web`). Run it with `DATABASE_URL` set;
 it serves on port 3000 and runs migrations on startup. Session cookies are Secure by default; behind a
@@ -168,7 +174,7 @@ Windows) with `WEB_DIST` pointing at `web/build/client`. With `--ssr`, also run 
 
 ## Not included yet
 
-File uploads, deploy recipes.
+File uploads, password reset and email verification (they need an email provider).
 
 ## License
 

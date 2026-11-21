@@ -1,0 +1,5 @@
+# HTTPS for SITE_URL: Caddy gets and renews the certificate itself and redirects http to https.
+{$SITE_URL} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}

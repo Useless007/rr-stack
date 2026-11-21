@@ -56,6 +56,7 @@ AI エージェントが持ち込むバグの多くは、2 つの層の食い違
 | プリレンダリングしたページ、SPA、API を 1 つのバイナリで配信する | SPA フォールバック付きの Axum。ディープリンクもテスト済み |
 | 検索エンジンに見つけてもらい、共有時にカードを表示する | canonical、Open Graph カード、`sitemap.xml`、`robots.txt` を公開ページの一覧 1 つから生成。非公開ページは `noindex`、`--ssr` では本当の 404 |
 | コンパイルだけでなく、実際のブラウザでページを確認する | `bun run e2e`：bun 上の Playwright（Node 不要）が全ページを開き、登録から削除までを操作。JS エラー、hydration の不一致、5xx があれば失敗し、スクリーンショットを残す |
+| HTTPS 付きでサーバーに載せる | `compose.prod.yml` が Caddy（証明書を自動取得）を追加し、80 と 443 以外のポートを閉じる。更新とバックアップは [DEPLOY.md](https://github.com/Useless007/rr-stack/blob/main/DEPLOY.md) |
 | Windows と Linux で同じコマンドを使う | bun スクリプト、LF 改行、両 OS での CI |
 | AI エージェントに「完了」の定義と触ってはいけないファイルを伝える | `AGENTS.md` とひとつのチェックコマンド |
 | 最初から安全なサインイン | Argon2id ハッシュ、HttpOnly SameSite cookie、ハッシュ化したセッショントークン、SQL での所有者チェック |

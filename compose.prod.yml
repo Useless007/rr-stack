@@ -1,0 +1,36 @@
+# Production on one server: Caddy in front with HTTPS, nothing else reachable from outside.
+#   docker compose -f compose.yml -f compose.prod.yml up -d --build
+# Needs SITE_URL and POSTGRES_PASSWORD in .env. Step by step: DEPLOY.md.
+services:
+  db:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (openssl rand -hex 24)}
+    ports: !reset []
+
+  app:
+    environment:
+      # Caddy is the one proxy in front: trust its X-Forwarded-For for the sign-in rate limit.
+      TRUST_PROXY: "true"
+    ports: !reset []
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      SITE_URL: ${SITE_URL:?Set SITE_URL in .env, for example https://example.com}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  # Caddy's certificates. Keep this volume: recreating it requests new ones, and Let's Encrypt
+  # limits how often that can happen.
+  caddy_data:
+  caddy_config:

@@ -47,7 +47,7 @@ describe("scaffold", () => {
     const compose = read("compose.yml");
     expect(compose).toContain("WEB_SSR_URL: http://web:3001");
     expect(compose).toContain(`127.0.0.1:${appPort("demo")}:3000`);
-    expect(compose).toContain("postgres://demo:demo@db:5432/demo");
+    expect(compose).toContain("postgres://demo:${POSTGRES_PASSWORD:-demo}@db:5432/demo");
     expect(compose).not.toContain("POSTGRES_USER: rr");
     expect(read("Dockerfile")).toContain("bun /app/web/server.ts");
   });
@@ -153,7 +153,8 @@ describe("scaffold", () => {
     const compose = readFileSync(join(dest, "compose.yml"), "utf8");
     expect(compose).toContain("POSTGRES_DB: my_app");
     expect(compose).toContain(`127.0.0.1:${port}:5432`);
-    expect(compose).toContain("postgres://my_app:my_app@db:5432/my_app");
+    expect(compose).toContain("postgres://my_app:${POSTGRES_PASSWORD:-my_app}@db:5432/my_app");
+    expect(compose).toContain("POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-my_app}");
     expect(compose).toContain(`127.0.0.1:${appPort("my-app")}:3000`);
     expect(compose).toContain(`http://localhost:${appPort("my-app")}`);
     expect(compose).toContain(`SITE_URL: ${"$"}{SITE_URL:-http://localhost:${appPort("my-app")}}`);
