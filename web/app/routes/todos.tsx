@@ -1,84 +1,155 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Link } from "react-router";
-import { createTodoMutation, listTodosOptions, listTodosQueryKey } from "~/api/@tanstack/react-query.gen";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router";
+import type { Todo } from "~/api";
+import {
+  createTodoMutation,
+  deleteTodoMutation,
+  listTodosOptions,
+  updateTodoMutation,
+} from "~/api/@tanstack/react-query.gen";
+import { errorMessage, formatDate } from "~/lib/errors";
+
+const tabs = [
+  { value: "all", label: "All" },
+  { value: "open", label: "Open" },
+  { value: "done", label: "Done" },
+] as const;
+type Status = (typeof tabs)[number]["value"];
 
 export default function Todos() {
   const queryClient = useQueryClient();
-  const todos = useQuery(listTodosOptions());
+  const [params, setParams] = useSearchParams();
+  const status: Status = tabs.some((t) => t.value === params.get("status")) ? (params.get("status") as Status) : "all";
+  const q = params.get("q") ?? "";
+
+  // The filter lives in the URL, so a filtered list can be shared or reloaded.
+  const listQuery = listTodosOptions({ query: { status, q: q || undefined } });
+  const todos = useQuery(listQuery);
+  const refresh = () => queryClient.invalidateQueries();
+
   const [title, setTitle] = useState("");
-  const create = useMutation({
-    ...createTodoMutation(),
-    onSuccess: () => {
-      setTitle("");
-      return queryClient.invalidateQueries({ queryKey: listTodosQueryKey() });
+  const create = useMutation({ ...createTodoMutation(), onSuccess: () => (setTitle(""), refresh()) });
+  const remove = useMutation({ ...deleteTodoMutation(), onSettled: refresh });
+  const toggle = useMutation({
+    ...updateTodoMutation(),
+    // Optimistic: tick the box at once, roll back if the API refuses.
+    onMutate: async (vars) => {
+      await queryClient.cancelQueries({ queryKey: listQuery.queryKey });
+      const before = queryClient.getQueryData<Todo[]>(listQuery.queryKey);
+      queryClient.setQueryData<Todo[]>(listQuery.queryKey, (list) =>
+        list?.map((t) => (t.id === vars.path.id ? { ...t, done: vars.body.done ?? t.done } : t)),
+      );
+      return { before };
     },
+    onError: (_err, _vars, ctx) => queryClient.setQueryData(listQuery.queryKey, ctx?.before),
+    onSettled: refresh,
   });
 
-  return (
-    <main className="mx-auto max-w-xl px-6 pb-24 pt-16">
-      <Link className="text-sm text-ink/60 hover:text-ink dark:text-paper/60 dark:hover:text-paper" to="/">
-        RR/stack
-      </Link>
-      <h1 className="mt-8 text-4xl font-semibold tracking-tight">Todos</h1>
-      <p className="mt-2 text-ink/70 dark:text-paper/70">
-        Every request here goes through the generated client in <code className="font-mono text-sm">~/api</code>.
-      </p>
+  const [search, setSearch] = useState(q);
+  useEffect(() => {
+    const id = setTimeout(() => {
+      if (search === q) return;
+      setParams((p) => (search ? p.set("q", search) : p.delete("q"), p), { replace: true });
+    }, 250);
+    return () => clearTimeout(id);
+  }, [search, q, setParams]);
 
+  return (
+    <div className="mt-10 max-w-xl">
       <form
-        className="mt-8 flex gap-2"
+        className="flex gap-2"
         onSubmit={(e) => {
           e.preventDefault();
           create.mutate({ body: { title } });
         }}
       >
-        <label className="sr-only" htmlFor="title">
+        <label className="sr-only" htmlFor="new-title">
           New todo
         </label>
         <input
-          id="title"
-          className="min-w-0 flex-1 rounded-md border border-ink/20 bg-white px-3 py-2 outline-none focus:border-patina-deep dark:border-paper/20 dark:bg-ink-soft dark:focus:border-patina"
+          id="new-title"
+          className="field flex-1"
           placeholder="What needs doing?"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-        <button
-          className="rounded-md bg-ink px-4 py-2 text-sm font-medium text-paper hover:bg-ink-soft disabled:opacity-60 dark:bg-paper dark:text-ink"
-          type="submit"
-          disabled={create.isPending}
-        >
+        <button className="btn" type="submit" disabled={create.isPending}>
           {create.isPending ? "Adding" : "Add todo"}
         </button>
       </form>
       {create.error && (
-        <p className="mt-3 text-sm text-fault" role="alert">
-          Not added. {String(create.error)}
+        <p className="mt-2 text-sm text-fault-deep dark:text-fault" role="alert">
+          Not added: {errorMessage(create.error)}
         </p>
       )}
 
-      <section className="mt-10" aria-live="polite">
-        {todos.isPending && <p className="text-ink/60 dark:text-paper/60">Loading todos</p>}
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+        <div role="tablist" aria-label="Filter by status" className="flex gap-1 rounded-lg bg-ink/5 p-1 text-sm dark:bg-paper/10">
+          {tabs.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              role="tab"
+              aria-selected={status === t.value}
+              className={`rounded-md px-3 py-1 ${status === t.value ? "bg-white font-medium shadow-sm dark:bg-ink-soft" : "muted"}`}
+              onClick={() => setParams((p) => (t.value === "all" ? p.delete("status") : p.set("status", t.value), p))}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <label className="sr-only" htmlFor="search">
+          Search todos
+        </label>
+        <input
+          id="search"
+          type="search"
+          className="field w-48 py-1.5 text-sm"
+          placeholder="Search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      <section className="mt-4" aria-live="polite">
+        {todos.isPending && <p className="muted py-4">Loading todos</p>}
         {todos.error && (
-          <p className="text-fault" role="alert">
-            Could not load todos. Is the API running? Start it with <code className="font-mono">bun run dev</code>.
+          <p className="py-4 text-fault-deep dark:text-fault" role="alert">
+            {errorMessage(todos.error)}
           </p>
         )}
         {todos.data?.length === 0 && (
-          <p className="text-ink/60 dark:text-paper/60">No todos yet. Add the first one above.</p>
+          <p className="muted py-4">{q || status !== "all" ? "Nothing matches this filter." : "No todos yet. Add the first one above."}</p>
         )}
-        {todos.data && todos.data.length > 0 && (
-          <ul className="divide-y divide-ink/10 border-y border-ink/10 dark:divide-paper/10 dark:border-paper/10">
-            {todos.data.map((todo) => (
-              <li key={todo.id} className="flex items-baseline justify-between gap-4 py-3">
-                <span>{todo.title}</span>
-                <time className="shrink-0 text-xs text-ink/50 dark:text-paper/50" dateTime={todo.created_at}>
-                  {new Date(todo.created_at).toLocaleDateString()}
-                </time>
-              </li>
-            ))}
-          </ul>
-        )}
+        <ul className="divide-y divide-ink/10 dark:divide-paper/10">
+          {todos.data?.map((todo) => (
+            <li key={todo.id} className="flex items-center gap-3 py-3.5 leading-relaxed">
+              <input
+                type="checkbox"
+                className="size-4 shrink-0 accent-patina-deep dark:accent-patina"
+                checked={todo.done}
+                aria-label={`Mark "${todo.title}" as ${todo.done ? "open" : "done"}`}
+                onChange={() => toggle.mutate({ path: { id: todo.id }, body: { done: !todo.done } })}
+              />
+              <Link to={`/app/todos/${todo.id}`} className={`min-w-0 flex-1 hover:underline ${todo.done ? "muted line-through" : ""}`}>
+                {todo.title}
+              </Link>
+              <time className="hidden shrink-0 text-xs text-ink/65 sm:block dark:text-paper/60" dateTime={todo.created_at}>
+                {formatDate(todo.created_at)}
+              </time>
+              <button
+                type="button"
+                className="shrink-0 rounded px-2 py-1 text-sm text-ink/65 hover:bg-fault/10 hover:text-fault-deep dark:text-paper/60 dark:hover:text-fault"
+                onClick={() => remove.mutate({ path: { id: todo.id } })}
+                aria-label={`Delete "${todo.title}"`}
+              >
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
       </section>
-    </main>
+    </div>
   );
 }

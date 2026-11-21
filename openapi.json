@@ -30,9 +30,45 @@
         }
       }
     },
+    "/api/stats": {
+      "get": {
+        "operationId": "getStats",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/todos": {
       "get": {
         "operationId": "listTodos",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Which todos to return. Defaults to all.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/StatusFilter"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Case-insensitive text to find in the title.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -42,6 +78,15 @@
                   "items": {
                     "$ref": "#/components/schemas/Todo"
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -71,7 +116,137 @@
             }
           },
           "422": {
-            "description": "title is empty or longer than 200 characters"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/todos/{id}": {
+      "get": {
+        "operationId": "getTodo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Todo"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteTodo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {},
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateTodo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TodoPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Todo"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -79,6 +254,24 @@
   },
   "components": {
     "schemas": {
+      "ApiError": {
+        "type": "object",
+        "description": "The body of every 4xx/5xx the API returns, so clients get a typed error instead of plain text.",
+        "required": [
+          "error",
+          "message"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Stable machine-readable code: `bad_request`, `not_found`, `validation`, `internal`."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable explanation, safe to show to a user."
+          }
+        }
+      },
       "Health": {
         "type": "object",
         "required": [
@@ -101,6 +294,28 @@
           }
         }
       },
+      "Stats": {
+        "type": "object",
+        "required": [
+          "total",
+          "open",
+          "done"
+        ],
+        "properties": {
+          "done": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "open": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "Todo": {
         "type": "object",
         "required": [
@@ -112,7 +327,7 @@
         "properties": {
           "created_at": {
             "type": "string",
-            "description": "RFC 3339 timestamp."
+            "format": "date-time"
           },
           "done": {
             "type": "boolean"
@@ -123,6 +338,28 @@
           },
           "title": {
             "type": "string"
+          }
+        }
+      },
+      "TodoPatch": {
+        "type": "object",
+        "description": "Fields left out are not changed.",
+        "properties": {
+          "done": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "title": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TodoTitle"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },

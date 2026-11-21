@@ -22,9 +22,21 @@ export function step(title: string): void {
   console.log(`\n== ${title}`);
 }
 
+const cleanups: (() => void)[] = [];
+/** Registers work that must happen even when a script fails (kill a server, delete a temp dir). */
+export function onExit(fn: () => void): void {
+  cleanups.push(fn);
+}
+
 export function fail(message: string): never {
   console.error(`\n${message}`);
+  for (const fn of cleanups.splice(0)) fn();
   process.exit(1);
+}
+
+/** Exits with an install hint when a required tool is missing from PATH. */
+export function need(tool: string, install: string): void {
+  if (!Bun.which(tool)) fail(`${tool} is not installed. Install it with: ${install}`);
 }
 
 /** Runs a shell command; on failure prints its captured output and exits 1. */
@@ -35,7 +47,7 @@ export async function run(cmd: ReturnType<typeof $>, quiet = false): Promise<str
   } catch (err) {
     if (err instanceof $.ShellError) {
       if (quiet) process.stderr.write(err.stdout.toString() + err.stderr.toString());
-      fail(`command failed with exit code ${err.exitCode}`);
+      fail(`failed with exit code ${err.exitCode} in the step above`);
     }
     throw err;
   }

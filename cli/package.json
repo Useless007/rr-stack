@@ -7,8 +7,8 @@
   },
   "scripts": {
     "test": "bun test",
-    "prepack": "rm -rf template && bun -e \"await (await import('./scaffold.ts')).buildTemplate('..', 'template')\" && cp ../LICENSE ../README.md .",
-    "postpack": "rm -rf template LICENSE README.md"
+    "prepack": "bun -e \"const fs=require('node:fs'); fs.rmSync('template',{recursive:true,force:true}); await (await import('./scaffold.ts')).buildTemplate('..','template'); for (const f of ['LICENSE','README.md']) fs.copyFileSync('../'+f, f)\"",
+    "postpack": "bun -e \"const fs=require('node:fs'); for (const f of ['template','LICENSE','README.md']) fs.rmSync(f,{recursive:true,force:true})\""
   },
   "description": "Scaffold a React Router + Rust (Axum) app that is typed from the database to the screen.",
   "license": "MIT",

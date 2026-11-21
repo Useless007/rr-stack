@@ -1,0 +1,8 @@
+.git
+.env
+**/node_modules
+**/target
+web/build
+web/.react-router
+cli
+docs

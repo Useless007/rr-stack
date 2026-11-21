@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { buildTemplate, dbPort, scaffold, validateName } from "./scaffold";
+import { appPort, buildTemplate, dbPort, scaffold, validateName } from "./scaffold";
 
 const repoRoot = resolve(import.meta.dir, "..");
 const freshDir = () => join(mkdtempSync(join(tmpdir(), "rr-cli-")), "out");
@@ -75,20 +75,31 @@ describe("scaffold", () => {
     expect(lock).not.toContain('name = "rr-server"');
   });
 
-  test("gives each project its own database name and port", async () => {
+  test("gives each project its own database name and ports", async () => {
     const dest = freshDir();
     await scaffold({ name: "my-app", dest, source: template });
     const port = dbPort("my-app");
     expect(port).toBeGreaterThanOrEqual(54000);
     expect(port).toBeLessThan(55000);
+    expect(appPort("my-app")).toBe(port + 1000);
     const compose = readFileSync(join(dest, "compose.yml"), "utf8");
     expect(compose).toContain("POSTGRES_DB: my_app");
     expect(compose).toContain(`127.0.0.1:${port}:5432`);
-    expect(compose).not.toContain(": rr\n");
+    expect(compose).toContain("postgres://my_app:my_app@db:5432/my_app");
+    expect(compose).toContain(`127.0.0.1:${appPort("my-app")}:3000`);
+    expect(compose).toContain(`http://localhost:${appPort("my-app")}`);
+    expect(compose).not.toMatch(/\brr\b/);
     const env = readFileSync(join(dest, ".env"), "utf8");
     expect(env).toContain(`postgres://my_app:my_app@localhost:${port}/my_app`);
-    expect(dbPort("my-app")).toBe(port);
     expect(dbPort("other")).not.toBe(port);
+  });
+
+  test("the copied CI workflow names nothing from the template", async () => {
+    const dest = freshDir();
+    await scaffold({ name: "my-app", dest, source: template });
+    const ci = readFileSync(join(dest, ".github/workflows/ci.yml"), "utf8");
+    expect(ci).not.toContain("rr:rr");
+    expect(ci).not.toContain("localhost:5432/rr");
   });
 
   test("titles the README with the project name", async () => {

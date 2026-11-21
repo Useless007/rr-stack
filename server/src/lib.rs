@@ -1,13 +1,13 @@
+mod error;
 mod health;
 mod todos;
 
+pub use error::AppError;
+
 use std::path::PathBuf;
 
-use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
+use axum::Router;
 use axum::routing::any;
-use axum::{Json, Router};
-use serde_json::{Value, json};
 use sqlx::PgPool;
 use tower_http::services::{ServeDir, ServeFile};
 use utoipa::openapi::OpenApi;
@@ -23,7 +23,13 @@ pub struct AppState {
 pub fn api_router() -> OpenApiRouter<AppState> {
     let api = OpenApiRouter::new()
         .routes(routes!(health::health))
-        .routes(routes!(todos::list_todos, todos::create_todo));
+        .routes(routes!(todos::list_todos, todos::create_todo))
+        .routes(routes!(
+            todos::get_todo,
+            todos::update_todo,
+            todos::delete_todo
+        ))
+        .routes(routes!(todos::get_stats));
     OpenApiRouter::new().nest("/api", api)
 }
 
@@ -49,32 +55,6 @@ pub fn app(state: AppState, web_dist: Option<PathBuf>) -> Router {
     }
 }
 
-/// Errors a handler can return; logged server-side, never leaked to the client.
-pub enum AppError {
-    Db(sqlx::Error),
-}
-
-impl From<sqlx::Error> for AppError {
-    fn from(err: sqlx::Error) -> Self {
-        Self::Db(err)
-    }
-}
-
-impl IntoResponse for AppError {
-    fn into_response(self) -> Response {
-        match self {
-            Self::Db(err) => {
-                tracing::error!(%err, "database error");
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(json!({ "error": "internal error" })),
-                )
-                    .into_response()
-            }
-        }
-    }
-}
-
-async fn json_404() -> (StatusCode, Json<Value>) {
-    (StatusCode::NOT_FOUND, Json(json!({ "error": "not found" })))
+async fn json_404() -> AppError {
+    AppError::NotFound("route")
 }

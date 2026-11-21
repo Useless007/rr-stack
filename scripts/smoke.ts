@@ -2,7 +2,7 @@
 import { $ } from "bun";
 import { createServer } from "node:net";
 import { join } from "node:path";
-import { bun, exe, fail, loadEnv, run, serverDir, webDir } from "./lib";
+import { bun, exe, fail, loadEnv, onExit, run, serverDir, webDir } from "./lib";
 
 loadEnv();
 if (!process.env.DATABASE_URL) fail("DATABASE_URL is not set (copy .env.example to .env)");
@@ -21,6 +21,7 @@ const server = Bun.spawn([join(serverDir, "target", "debug", `server${exe}`)], {
   stdout: "pipe",
   stderr: "pipe",
 });
+onExit(() => server.kill());
 const base = `http://127.0.0.1:${port}`;
 
 try {
@@ -29,7 +30,10 @@ try {
     up = await fetch(`${base}/api/health`).then((r) => r.ok, () => false);
     if (!up) await Bun.sleep(100);
   }
-  if (!up) fail(`server did not start:\n${await new Response(server.stderr).text()}`);
+  if (!up) {
+    server.kill();
+    fail(`server did not start:\n${await new Response(server.stderr).text()}`);
+  }
 
   const expect = async (path: string, status: number, init?: RequestInit) => {
     const res = await fetch(base + path, init);
@@ -37,10 +41,14 @@ try {
     return { type: res.headers.get("content-type") ?? "", body: await res.text() };
   };
 
-  if (!(await expect("/", 200)).body.includes("Typed from the database to the screen")) fail("smoke FAIL: / is not the prerendered landing page");
+  if (!(await expect("/", 200)).body.includes("typed from the database to the screen")) fail("smoke FAIL: / is not the prerendered landing page");
+  if (!(await expect("/api-reference/", 200)).body.includes("/api/todos/{id}")) fail("smoke FAIL: /api-reference was not prerendered from openapi.json");
   if (!(await expect("/app/todos", 200)).body.includes("<script")) fail("smoke FAIL: /app/todos did not return the SPA shell");
   if (!(await expect("/api/nope", 404)).type.startsWith("application/json")) fail("smoke FAIL: /api/nope is not JSON");
-  await expect("/api/todos", 201, { method: "POST", headers: { "content-type": "application/json" }, body: '{"title":"smoke"}' });
+  const json = { "content-type": "application/json" };
+  const todo = JSON.parse((await expect("/api/todos", 201, { method: "POST", headers: json, body: '{"title":"smoke"}' })).body);
+  await expect(`/api/todos/${todo.id}`, 200, { method: "PATCH", headers: json, body: '{"done":true}' });
+  await expect(`/api/todos/${todo.id}`, 204, { method: "DELETE" });
   console.log("smoke OK");
 } finally {
   server.kill();

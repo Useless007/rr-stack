@@ -4,6 +4,20 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+/**
+ * The body of every 4xx/5xx the API returns, so clients get a typed error instead of plain text.
+ */
+export type ApiError = {
+    /**
+     * Stable machine-readable code: `bad_request`, `not_found`, `validation`, `internal`.
+     */
+    error: string;
+    /**
+     * Human-readable explanation, safe to show to a user.
+     */
+    message: string;
+};
+
 export type Health = {
     status: string;
 };
@@ -12,14 +26,25 @@ export type NewTodo = {
     title: TodoTitle;
 };
 
+export type Stats = {
+    done: number;
+    open: number;
+    total: number;
+};
+
 export type Todo = {
-    /**
-     * RFC 3339 timestamp.
-     */
     created_at: string;
     done: boolean;
     id: number;
     title: string;
+};
+
+/**
+ * Fields left out are not changed.
+ */
+export type TodoPatch = {
+    done?: boolean | null;
+    title?: TodoTitle | null;
 };
 
 /**
@@ -40,12 +65,40 @@ export type HealthResponses = {
 
 export type HealthResponse = HealthResponses[keyof HealthResponses];
 
-export type ListTodosData = {
+export type GetStatsData = {
     body?: never;
     path?: never;
     query?: never;
+    url: '/api/stats';
+};
+
+export type GetStatsResponses = {
+    200: Stats;
+};
+
+export type GetStatsResponse = GetStatsResponses[keyof GetStatsResponses];
+
+export type ListTodosData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Which todos to return. Defaults to all.
+         */
+        status?: unknown;
+        /**
+         * Case-insensitive text to find in the title.
+         */
+        q?: string;
+    };
     url: '/api/todos';
 };
+
+export type ListTodosErrors = {
+    400: ApiError;
+};
+
+export type ListTodosError = ListTodosErrors[keyof ListTodosErrors];
 
 export type ListTodosResponses = {
     200: Array<Todo>;
@@ -61,14 +114,78 @@ export type CreateTodoData = {
 };
 
 export type CreateTodoErrors = {
-    /**
-     * title is empty or longer than 200 characters
-     */
-    422: unknown;
+    422: ApiError;
 };
+
+export type CreateTodoError = CreateTodoErrors[keyof CreateTodoErrors];
 
 export type CreateTodoResponses = {
     201: Todo;
 };
 
 export type CreateTodoResponse = CreateTodoResponses[keyof CreateTodoResponses];
+
+export type DeleteTodoData = {
+    body?: never;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/todos/{id}';
+};
+
+export type DeleteTodoErrors = {
+    404: ApiError;
+};
+
+export type DeleteTodoError = DeleteTodoErrors[keyof DeleteTodoErrors];
+
+export type DeleteTodoResponses = {
+    204: void;
+};
+
+export type DeleteTodoResponse = DeleteTodoResponses[keyof DeleteTodoResponses];
+
+export type GetTodoData = {
+    body?: never;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/todos/{id}';
+};
+
+export type GetTodoErrors = {
+    400: ApiError;
+    404: ApiError;
+};
+
+export type GetTodoError = GetTodoErrors[keyof GetTodoErrors];
+
+export type GetTodoResponses = {
+    200: Todo;
+};
+
+export type GetTodoResponse = GetTodoResponses[keyof GetTodoResponses];
+
+export type UpdateTodoData = {
+    body: TodoPatch;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/todos/{id}';
+};
+
+export type UpdateTodoErrors = {
+    404: ApiError;
+    422: ApiError;
+};
+
+export type UpdateTodoError = UpdateTodoErrors[keyof UpdateTodoErrors];
+
+export type UpdateTodoResponses = {
+    200: Todo;
+};
+
+export type UpdateTodoResponse = UpdateTodoResponses[keyof UpdateTodoResponses];

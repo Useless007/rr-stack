@@ -1,3 +1,5 @@
+# docker compose up -d       -> the whole app at http://localhost:8000
+# docker compose up -d db    -> only Postgres, for bun run dev
 services:
   db:
     image: postgres:18-alpine
@@ -13,5 +15,17 @@ services:
       test: ["CMD-SHELL", "pg_isready -U rr"]
       interval: 2s
       retries: 30
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgres://rr:rr@db:5432/rr
+    ports:
+      - "127.0.0.1:8000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   pgdata:

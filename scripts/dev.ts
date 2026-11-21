@@ -5,9 +5,9 @@ import { bun, fail, loadEnv, serverDir, webDir } from "./lib";
 
 loadEnv();
 try {
-  await $`docker compose up -d --wait`.quiet();
+  await $`docker compose up -d --wait db`.quiet();
 } catch {
-  fail("could not start Postgres with Docker. Is Docker running? (docker compose up -d --wait)");
+  fail("could not start Postgres with Docker. Is Docker running? (docker compose up -d --wait db)");
 }
 
 const apiPort = process.env.PORT ?? "3000";
