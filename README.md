@@ -61,9 +61,15 @@ Each row costs a few hours of docs and trial and error the first time, and is ea
 wrong: a client that CI never regenerates, a fallback that answers `/api/typo` with HTML. Here each
 one has a test.
 
-**When not to use it.** You need per-request server rendering (`ssr: true`, not supported yet).
-Your backend is already TypeScript, so one language can share types without codegen (bhvr,
-Next.js). Or your team does not want Rust.
+**Going further.**
+
+- Search engines need a page? Add its path to `prerender` in `web/react-router.config.ts` and it
+  ships as static HTML. Per-request server rendering (`ssr: true`) is not built in yet. It works
+  by running React Router's server next to Axum.
+- Already have a backend in another language? The web half only reads `openapi.json`, so any
+  backend that publishes an OpenAPI spec can drive the same generated client and hooks.
+- New to Rust? The agent writes it and the compiler tells the agent exactly what to fix.
+  `bun run check` tells you when it is done.
 
 ## Quick start
 

@@ -59,8 +59,14 @@ AI agent 引入的大多数 bug，本质上是两层之间不一致：改了列�
 每一行第一次做都要花几个小时查文档、反复试错，而且很容易出现隐蔽的错误：CI 从不重新生成的客户端、
 把 `/api/拼错` 当作 HTML 返回的 fallback。这里每一行都有测试保护。
 
-**不适合的情况。** 需要每个请求都在服务端渲染（`ssr: true`，暂不支持）；后端已经是 TypeScript，
-单一语言无需代码生成即可共享类型（例如 bhvr、Next.js）；或者团队不想用 Rust。
+**进一步扩展**
+
+- 想让搜索引擎看到某个页面？把它的路径加到 `web/react-router.config.ts` 的 `prerender` 里，它就会
+  以静态 HTML 发布。按请求的服务端渲染（`ssr: true`）还没有内置，可以在 Axum 旁边运行 React Router
+  的服务器来实现。
+- 已经有其他语言的后端？Web 端只读取 `openapi.json`，任何能输出 OpenAPI spec 的后端都能驱动同一套
+  生成的客户端和 hooks。
+- 没写过 Rust？代码由 agent 来写，编译器会告诉 agent 该改哪里，`bun run check` 会告诉你什么时候完成。
 
 ## 快速开始
 

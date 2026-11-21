@@ -60,9 +60,15 @@ repo นี้ทำไว้ให้
 แต่ละแถวกินเวลาอ่าน docs และลองผิดลองถูกหลายชั่วโมงในครั้งแรก และพลาดแบบเนียนๆ ได้ง่าย เช่น client
 ที่ CI ไม่เคย generate ใหม่ หรือ fallback ที่ตอบ `/api/พิมพ์ผิด` เป็น HTML ที่นี่ทุกแถวมี test คุมไว้
 
-**กรณีที่ไม่ควรใช้** ต้องการ render ฝั่ง server ทุก request (`ssr: true` ยังไม่รองรับ), backend
-เป็น TypeScript อยู่แล้ว ซึ่งภาษาเดียวแชร์ type ได้โดยไม่ต้อง generate (เช่น bhvr หรือ Next.js) หรือทีมไม่อยาก
-ใช้ Rust
+**ต่อยอดได้อีก**
+
+- อยากให้ search engine เห็นหน้าไหน ใส่ path ไว้ใน `prerender` ของ `web/react-router.config.ts`
+  หน้านั้นจะออกมาเป็น HTML แบบ static ส่วนการ render ฝั่ง server ทุก request (`ssr: true`) ยังไม่ได้
+  ทำไว้ให้ ทำได้โดยรัน server ของ React Router คู่กับ Axum
+- มี backend ภาษาอื่นอยู่แล้ว ฝั่งเว็บอ่านแค่ `openapi.json` backend ไหนที่ออก OpenAPI spec ได้ก็ใช้
+  client และ hooks ที่ generate ชุดเดียวกันนี้ได้
+- ไม่เคยเขียน Rust ก็ได้ agent เป็นคนเขียน compiler บอก agent ว่าต้องแก้ตรงไหน และ `bun run check`
+  บอกคุณว่างานเสร็จหรือยัง
 
 ## เริ่มใช้งาน
 
