@@ -76,14 +76,24 @@ describe("scaffold", () => {
   test("the Astryx overlay's package.json and lockfile match the template's (run bun cli/astryx/sync.ts)", () => {
     const overlay = readFileSync(join(import.meta.dir, "astryx/files/web/package.json"), "utf8");
     expect(overlay).toBe(withAstryx(readFileSync(join(repoRoot, "web/package.json"), "utf8")));
-    const lock = readFileSync(join(import.meta.dir, "astryx/files/web/bun.lock"), "utf8");
-    const template = JSON.parse(readFileSync(join(repoRoot, "web/package.json"), "utf8"));
-    // Every template dependency is locked at the same version as in the template's own lockfile.
-    const templateLock = readFileSync(join(repoRoot, "web/bun.lock"), "utf8");
-    for (const dep of Object.keys({ ...template.dependencies, ...template.devDependencies })) {
-      const entry = (text: string) => text.match(new RegExp(`\\n    "${dep.replace("/", "\\/")}": \\["([^"]+)"`))?.[1];
-      expect(entry(lock)).toBe(entry(templateLock));
-    }
+    // Every exact version the template locks (direct or not) is in the Astryx lock too. It may sit
+    // one level down (Astryx pulls older @babel/* and commander, so bun hoists those instead).
+    const versions = (file: string) =>
+      new Set([...readFileSync(file, "utf8").matchAll(/\n {4}"[^"]+": \["([^"]+)"/g)].map((m) => m[1]!));
+    const templateLock = versions(join(repoRoot, "web/bun.lock"));
+    const astryxLock = versions(join(import.meta.dir, "astryx/files/web/bun.lock"));
+    expect(templateLock.size).toBeGreaterThan(100);
+    expect([...templateLock].filter((v) => !astryxLock.has(v))).toEqual([]);
+  });
+
+  test("--ssr and --astryx together: Astryx pages, the SSR loader route and renderer", async () => {
+    const dest = freshDir();
+    await scaffold({ name: "demo", dest, source: template, overlays: [join(import.meta.dir, "ssr"), join(import.meta.dir, "astryx", "files")] });
+    const read = (f: string) => readFileSync(join(dest, f), "utf8");
+    expect(read("web/app/routes/todo.tsx")).toContain("export async function loader");
+    expect(read("web/app/components/todo-page.tsx")).toContain("@astryxdesign/core");
+    expect(existsSync(join(dest, "web/server.ts"))).toBeTrue();
+    expect(read("web/react-router.config.ts")).toContain("ssr: true");
   });
 
   test("without --ssr the project is prerender + SPA", async () => {
@@ -234,6 +244,15 @@ describe("update notice", () => {
     expect(out).not.toContain("@latest");
     expect(performance.now() - started).toBeLessThan(6000);
   }, 10_000);
+
+  test("refuses conflicting and unknown options before creating anything", () => {
+    for (const args of [["--ssr", "--spa"], ["--astryx", "--tailwind"], ["--astyrx"]]) {
+      const cwd = mkdtempSync(join(tmpdir(), "rr-run-"));
+      const res = Bun.spawnSync([process.execPath, join(import.meta.dir, "index.ts"), "demo", "--yes", ...args], { cwd });
+      expect(res.exitCode).toBe(1);
+      expect(existsSync(join(cwd, "demo"))).toBeFalse();
+    }
+  });
 
   test("keeps the flags the user typed in the suggested command", async () => {
     const { out } = await runAgainst("99.0.0");

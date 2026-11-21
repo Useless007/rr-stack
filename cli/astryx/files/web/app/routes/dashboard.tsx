@@ -20,7 +20,7 @@ export default function Dashboard() {
 
   return (
     <VStack gap={10} paddingBlockStart={8}>
-      {stats.error && <Banner status="error" title={errorMessage(stats.error)} />}
+      {stats.error && <Banner role="alert" status="error" title={errorMessage(stats.error)} />}
       {s && (
         <VStack gap={3} as="section">
           <Heading level={2}>{s.total === 0 ? "Nothing to do yet" : `${s.done} of ${s.total} done`}</Heading>
@@ -34,10 +34,18 @@ export default function Dashboard() {
       <VStack gap={3} as="section">
         <HStack justify="between" align="center">
           <Heading level={3}>Latest</Heading>
-          <Link href="/app/todos">All todos</Link>
+          <Link hasUnderline href="/app/todos">All todos</Link>
         </HStack>
         {recent.data?.length === 0 && (
-          <EmptyState title="No todos yet" description="Add the first one on the Todos tab." isCompact />
+          <EmptyState
+            title="No todos yet"
+            isCompact
+            actions={
+              <Link hasUnderline href="/app/todos">
+                Add the first one
+              </Link>
+            }
+          />
         )}
         {!!recent.data?.length && (
           <List hasDividers>

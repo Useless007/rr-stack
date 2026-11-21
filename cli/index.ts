@@ -10,6 +10,7 @@ import { appPort, buildTemplate, isOlder, latestVersion, scaffold, validateName 
 const args = process.argv.slice(2);
 const flags = new Set(args.filter((a) => a.startsWith("--")));
 const interactive = Boolean(process.stdin.isTTY) && !flags.has("--yes");
+const KNOWN = ["--yes", "--no-install", "--no-git", "--ssr", "--spa", "--astryx", "--tailwind"];
 const bold = (s: string) => styleText("bold", s);
 const cyan = (s: string) => styleText("cyan", s);
 const dim = (s: string) => styleText("dim", s);
@@ -27,6 +28,13 @@ async function ask<T>(prompt: Promise<T | symbol>): Promise<T> {
 
 p.intro(styleText(["bgCyan", "black"], ` create-rr-stack ${pkg.version} `));
 
+const unknown = [...flags].filter((f) => !KNOWN.includes(f));
+if (unknown.length) bail(`Unknown option ${unknown.join(", ")}. Options: ${KNOWN.join(" ")}`);
+for (const [a, b] of [["--ssr", "--spa"], ["--astryx", "--tailwind"]] as const) {
+  if (flags.has(a) && flags.has(b)) bail(`Pick one of ${a} or ${b}.`);
+}
+
+// Same minimum as MIN_BUN in the template's scripts/lib.ts.
 if (isOlder(Bun.version, "1.4.0")) {
   p.log.warn(`bun ${Bun.version} is too old for the web build (needs 1.4.0 or newer). Run ${cyan("bun upgrade")} first.`);
 }

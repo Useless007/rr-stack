@@ -74,16 +74,16 @@ jobs:
           bun run check
           bun run smoke
 
-      - name: scaffold a --astryx project, check it and smoke-test it
+      - name: scaffold --astryx projects (SPA and SSR), check them and smoke-test them
         if: hashFiles('cli/package.json') != ''
         shell: bash
         run: |
           [ -n "${DATABASE_URL:-}" ] || export "$(grep '^DATABASE_URL=' "$GITHUB_WORKSPACE/.env")"
           cd "$RUNNER_TEMP"
-          bun "$GITHUB_WORKSPACE/cli/index.ts" ci-astryx --spa --astryx --yes --no-git
-          cd ci-astryx
-          bun run check
-          bun run smoke
+          for mode in spa ssr; do
+            bun "$GITHUB_WORKSPACE/cli/index.ts" ci-astryx-$mode --$mode --astryx --yes --no-git
+            (cd ci-astryx-$mode && bun run check && bun run smoke)
+          done
 
   docker:
     runs-on: ubuntu-latest
@@ -103,6 +103,10 @@ jobs:
           curl -fsS -H "cookie: $session" -X POST -H 'content-type: application/json' -d '{"title":"from docker"}' "$url/api/todos"
 
   docker-ssr:
+    strategy:
+      fail-fast: false
+      matrix:
+        ui: [tailwind, astryx]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -112,11 +116,11 @@ jobs:
       - if: hashFiles('cli/package.json') != ''
         run: bun install --frozen-lockfile
         working-directory: cli
-      - name: a --ssr --astryx project's docker compose up -d renders pages with their data
+      - name: a --ssr project's docker compose up -d renders pages with their data
         if: hashFiles('cli/package.json') != ''
         run: |
           cd "$RUNNER_TEMP"
-          bun "$GITHUB_WORKSPACE/cli/index.ts" ssr-docker --ssr --astryx --yes --no-git --no-install
+          bun "$GITHUB_WORKSPACE/cli/index.ts" ssr-docker --ssr --${{ matrix.ui }} --yes --no-git --no-install
           cd ssr-docker
           docker compose up -d --build --wait
           url="http://$(docker compose port app 3000)"

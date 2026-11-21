@@ -7,7 +7,7 @@ export const serverDir = join(root, "server");
 export const webDir = join(root, "web");
 export const bun = process.execPath;
 
-/** Oldest bun that runs React Router's build and dev server (older ones fail to prerender). */
+/** Oldest bun that runs React Router's build and dev server (older ones fail to prerender). The CLI checks the same version (cli/index.ts). */
 export const MIN_BUN = "1.4.0";
 const older = (a: string, b: string) => {
   const [x, y] = [a, b].map((v) => v.split(".").map((n) => Number.parseInt(n, 10)));

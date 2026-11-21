@@ -20,6 +20,7 @@ import {
   listTodosOptions,
   updateTodoMutation,
 } from "~/api/@tanstack/react-query.gen";
+import { LocalDate } from "~/components/local-date";
 import { useSession } from "~/components/session";
 import { errorMessage } from "~/lib/errors";
 
@@ -103,7 +104,7 @@ export default function Todos() {
         { error: create.error, what: "Not added" },
         { error: toggle.error, what: "Not updated" },
         { error: remove.error, what: "Not deleted" },
-      ].map(({ error, what }) => error && <Banner key={what} status="error" title={`${what}: ${errorMessage(error)}`} />)}
+      ].map(({ error, what }) => error && <Banner key={what} role="alert" status="error" title={`${what}: ${errorMessage(error)}`} />)}
 
       <HStack gap={3} justify="between" align="center" wrap="wrap">
         <SegmentedControl
@@ -154,15 +155,21 @@ export default function Todos() {
                     </Link>
                   }
                   endContent={
-                    mine && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        label="Delete"
-                        tooltip={`Delete "${todo.title}"`}
-                        onClick={() => remove.mutate({ path: { id: todo.id } })}
-                      />
-                    )
+                    <HStack gap={3} align="center">
+                      <Text color="secondary" size="xsm">
+                        <LocalDate iso={todo.created_at} />
+                      </Text>
+                      {mine && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          label={`Delete "${todo.title}"`}
+                          onClick={() => remove.mutate({ path: { id: todo.id } })}
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </HStack>
                   }
                 />
               );

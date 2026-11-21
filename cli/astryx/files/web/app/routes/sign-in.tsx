@@ -26,6 +26,9 @@ export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [cookieRefused, setCookieRefused] = useState(false);
+  const [tried, setTried] = useState(false);
+  const emailProblem = tried && !email.includes("@") ? "Enter your email address." : undefined;
+  const passwordProblem = tried && password.length < 8 ? "Use at least 8 characters." : undefined;
   const done = {
     onSuccess: async () => {
       // The server set a Secure cookie; a browser on plain HTTP (not localhost) silently drops it.
@@ -53,10 +56,20 @@ export default function SignIn() {
         gap={4}
         onSubmit={(e: React.FormEvent) => {
           e.preventDefault();
+          setTried(true);
+          if (!email.includes("@") || password.length < 8) return;
           action.mutate({ body: { email, password } });
         }}
       >
-        <TextInput label="Email" type="email" autoComplete="email" isRequired value={email} onChange={setEmail} />
+        <TextInput
+          label="Email"
+          type="email"
+          autoComplete="email"
+          isRequired
+          value={email}
+          onChange={setEmail}
+          status={emailProblem ? { type: "error", message: emailProblem } : undefined}
+        />
         <TextInput
           label="Password"
           type="password"
@@ -65,20 +78,21 @@ export default function SignIn() {
           isRequired
           value={password}
           onChange={setPassword}
+          status={passwordProblem ? { type: "error", message: passwordProblem } : undefined}
         />
         {cookieRefused && (
-          <Banner
+          <Banner role="alert"
             status="warning"
             title="Signed in, but this browser did not keep the session cookie"
             description="The cookie is Secure, so it needs HTTPS or localhost. On plain HTTP elsewhere, set COOKIE_SECURE=false in .env."
           />
         )}
-        {action.error && <Banner status="error" title={errorMessage(action.error)} />}
+        {action.error && <Banner role="alert" status="error" title={errorMessage(action.error)} />}
         <Button type="submit" variant="primary" label={creating ? "Create account" : "Sign in"} isLoading={action.isPending} />
       </VStack>
       <Text color="secondary">
         {creating ? "Already have an account? " : "No account yet? "}
-        <Link href={`/sign-in?${new URLSearchParams({ ...(creating ? {} : { new: "1" }), next })}`}>
+        <Link hasUnderline href={`/sign-in?${new URLSearchParams({ ...(creating ? {} : { new: "1" }), next })}`}>
           {creating ? "Sign in" : "Create one"}
         </Link>
       </Text>

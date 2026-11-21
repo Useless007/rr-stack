@@ -8,5 +8,20 @@
 @import "@astryxdesign/core/reset.css";
 @import "@astryxdesign/core/astryx.css";
 @import "@astryxdesign/theme-neutral/theme.css";
-@import "@astryxdesign/core/tailwind-theme.css";
 @import "tailwindcss/utilities.css" layer(utilities);
+
+/* The theme wraps every page, so it would also restyle the Tailwind pages (Figtree has no Thai, and
+   headings turn pure black). Keep the app's type and ink colour. Inside @scope, because theme.css
+   declares its tokens there and would otherwise win by scope proximity. Astryx's Tailwind token
+   bridge (tailwind-theme.css) is left out on purpose: it remaps text-sm, rounded-md and shadow-sm. */
+@layer astryx-theme {
+  @scope ([data-astryx-theme]) {
+    :scope {
+      --font-family-body: "IBM Plex Sans Variable", "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
+      --font-family-heading: var(--font-family-body);
+      --color-text-primary: light-dark(#0e1a2b, #eef2f6);
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+  }
+}

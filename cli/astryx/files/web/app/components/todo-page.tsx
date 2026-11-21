@@ -43,7 +43,7 @@ export function TodoPage({ id, initial }: { id: number; initial?: { todo?: Todo;
     onSuccess: () => queryClient.invalidateQueries().then(() => navigate("/app/todos")),
   });
 
-  const back = <Link href="/app/todos">Back to todos</Link>;
+  const back = <Link hasUnderline href="/app/todos">Back to todos</Link>;
 
   const error = todo.error ?? (todo.isPending ? initial?.error : null);
   if (error) {
@@ -78,7 +78,7 @@ export function TodoPage({ id, initial }: { id: number; initial?: { todo?: Todo;
           <TextInput label="Title" value={draft ?? t.title} isReadOnly={!mine} onChange={setDraft} containerClassName="min-w-0 flex-1" />
           <Button type="submit" label="Save" isDisabled={!mine || draft === null} isLoading={save.isPending} />
         </HStack>
-        {save.error && <Banner status="error" title={`Not saved: ${errorMessage(save.error)}`} />}
+        {save.error && <Banner role="alert" status="error" title={`Not saved: ${errorMessage(save.error)}`} />}
       </VStack>
 
       <MetadataList>
@@ -108,7 +108,7 @@ export function TodoPage({ id, initial }: { id: number; initial?: { todo?: Todo;
           <Button variant="destructive" label="Delete this todo" onClick={() => remove.mutate({ path: { id } })} isLoading={remove.isPending} />
         </HStack>
       )}
-      {[toggle.error, remove.error].map((error, i) => error && <Banner key={i} status="error" title={errorMessage(error)} />)}
+      {[toggle.error, remove.error].map((error, i) => error && <Banner role="alert" key={i} status="error" title={errorMessage(error)} />)}
     </VStack>
   );
 }
