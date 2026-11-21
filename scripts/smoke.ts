@@ -3,8 +3,9 @@ import { $ } from "bun";
 import { existsSync } from "node:fs";
 import { createServer } from "node:net";
 import { join } from "node:path";
-import { bun, exe, fail, loadEnv, onExit, run, serverDir, webDir } from "./lib";
+import { bun, exe, fail, loadEnv, needBun, onExit, run, serverDir, webDir } from "./lib";
 
+needBun();
 loadEnv();
 if (!process.env.DATABASE_URL) fail("DATABASE_URL is not set (copy .env.example to .env)");
 

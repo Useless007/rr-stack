@@ -87,7 +87,7 @@ A new project is a small working site about the stack: prerendered pages, an API
 from the contract, sign-in, and a playground with full CRUD, filters, search, optimistic updates,
 live updates over a WebSocket and typed 401/403/404/422 errors. Read its `README.md` and `AGENTS.md` for the day-to-day workflow.
 
-Requirements: Docker. To develop, also Rust (stable), [bun](https://bun.sh), git and
+Requirements: Docker. To develop, also Rust (stable), [bun](https://bun.sh) 1.4+, git and
 `cargo install sqlx-cli --no-default-features --features postgres,rustls`.
 
 ## This repository

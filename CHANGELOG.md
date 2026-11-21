@@ -3,6 +3,17 @@
 Versions are the `create-rr-stack` package on npm. A version changes what new projects start
 with; existing projects are not updated.
 
+## 0.4.1 (unreleased)
+
+- React Router runs on bun (`bun --bun react-router ...`), so Node is not needed at all and its
+  "Node v20 detected" warning is gone. bun 1.4+ is required; `bun run dev`, `check` and `smoke`
+  say `bun upgrade` when it is older, and the CLI warns up front.
+- `bun run dev` starts the Rust server API-only (`WEB_DIST=""`); Vite serves the pages, so there is
+  no "missing SPA shell" warning in `--ssr` projects. The Vite proxy follows `PORT` from `.env`.
+- Server logs are quieter by default (`info,sqlx=warn`; `RUST_LOG` overrides).
+- The CLI always shows the render mode, also when it came from `--ssr`, takes `--spa` to skip the
+  question, and names the mode in the next steps.
+
 ## 0.4.0 (2026-11-21)
 
 - `bun create rr-stack my-app --ssr` (or pick "Server rendering" in the prompt): every route renders

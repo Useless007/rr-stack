@@ -1,8 +1,9 @@
 // One command for local development: Postgres in Docker, the Rust API, and the Vite dev server.
 import { $ } from "bun";
 import { styleText } from "node:util";
-import { bun, fail, hasSqlx, loadEnv, run, serverDir, webDir } from "./lib";
+import { bun, fail, hasSqlx, loadEnv, needBun, run, serverDir, webDir } from "./lib";
 
+needBun();
 loadEnv();
 try {
   await $`docker compose up -d --wait db`.quiet();
@@ -33,7 +34,8 @@ console.log(`
 `);
 
 const children = [
-  Bun.spawn(["cargo", "run", "-q", "--bin", "server"], { cwd: serverDir, env: process.env, stdio: ["inherit", "inherit", "inherit"] }),
+  // WEB_DIST="" : Vite serves the pages in development, the Rust server only the API.
+  Bun.spawn(["cargo", "run", "-q", "--bin", "server"], { cwd: serverDir, env: { ...process.env, WEB_DIST: "" }, stdio: ["inherit", "inherit", "inherit"] }),
   Bun.spawn([bun, "run", "dev"], { cwd: webDir, stdio: ["inherit", "inherit", "inherit"] }),
 ];
 const stop = () => {

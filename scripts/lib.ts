@@ -6,6 +6,18 @@ export const root = join(import.meta.dir, "..");
 export const serverDir = join(root, "server");
 export const webDir = join(root, "web");
 export const bun = process.execPath;
+
+/** Oldest bun that runs React Router's build and dev server (older ones fail to prerender). */
+export const MIN_BUN = "1.4.0";
+const older = (a: string, b: string) => {
+  const [x, y] = [a, b].map((v) => v.split(".").map((n) => Number.parseInt(n, 10)));
+  for (let i = 0; i < 3; i++) if ((x![i] ?? 0) !== (y![i] ?? 0)) return (x![i] ?? 0) < (y![i] ?? 0);
+  return false;
+};
+/** Exits with an upgrade hint when this bun is too old for the web build. */
+export function needBun(): void {
+  if (older(Bun.version, MIN_BUN)) fail(`bun ${Bun.version} is too old; RR stack needs ${MIN_BUN} or newer. Run: bun upgrade`);
+}
 export const exe = process.platform === "win32" ? ".exe" : "";
 
 /** Loads the project's .env into process.env without overriding real environment variables. */

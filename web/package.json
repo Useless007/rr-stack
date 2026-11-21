@@ -3,9 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "react-router dev",
-    "build": "react-router build",
-    "typecheck": "react-router typegen && tsc --noEmit",
+    "dev": "bun --bun react-router dev",
+    "build": "bun --bun react-router build",
+    "typecheck": "bun --bun react-router typegen && bun --bun tsc --noEmit",
     "test": "bun test app"
   },
   "dependencies": {

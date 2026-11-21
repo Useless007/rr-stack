@@ -5,7 +5,7 @@ are an agent, also follow `AGENTS.md`: its rules apply here too.
 
 ## Set up
 
-You need Rust (stable), [bun](https://bun.sh), Docker, git and
+You need Rust (stable), [bun](https://bun.sh) 1.4+, Docker, git and
 `cargo install sqlx-cli --no-default-features --features postgres,rustls`.
 
 ```bash

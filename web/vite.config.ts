@@ -9,7 +9,8 @@ export default defineConfig({
   },
   server: {
     // Regex, not "/api": a plain prefix would also proxy /api-reference.
-    proxy: { "^/api(/|$)": { target: "http://localhost:3000", ws: true } },
+    // PORT comes from the project .env via bun run dev.
+    proxy: { "^/api(/|$)": { target: `http://localhost:${process.env.PORT ?? "3000"}`, ws: true } },
     strictPort: true,
     // api-reference imports ../openapi.json at build time.
     fs: { allow: [".."] },

@@ -46,7 +46,8 @@ Axum stays in front (see [Rendering](#rendering)).
 ## Requirements
 
 - To run it with Docker only: Docker (Docker Desktop on Windows and macOS).
-- To develop: also Rust (stable), [bun](https://bun.sh), git, and
+- To develop: also Rust (stable), [bun](https://bun.sh) 1.4+ (no Node needed: React Router runs
+  on bun), git, and
   `cargo install sqlx-cli --no-default-features --features postgres,rustls`.
 
 ## Try it with Docker

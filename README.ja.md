@@ -89,7 +89,7 @@ bun run dev              # Docker の Postgres + Rust API + Vite（ホットリ�
 WebSocket によるリアルタイム更新・型付き 401/403/404/422 エラーをすべて備えた playground が入っています。日々の流れはプロジェクトの
 `README.md` と `AGENTS.md` を読んでください。
 
-必要なもの：Docker。開発する場合は Rust（stable）、[bun](https://bun.sh)、git、
+必要なもの：Docker。開発する場合は Rust（stable）、[bun](https://bun.sh) 1.4+、git、
 `cargo install sqlx-cli --no-default-features --features postgres,rustls` も必要です。
 
 ## このリポジトリについて

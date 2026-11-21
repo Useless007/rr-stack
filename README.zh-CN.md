@@ -83,7 +83,7 @@ bun run dev              # Docker 中的 Postgres + Rust API + Vite，支持热�
 完整 CRUD、筛选、搜索、乐观更新、WebSocket 实时更新和带类型 401/403/404/422 错误的 playground。日常工作流程请看项目里的
 `README.md` 和 `AGENTS.md`。
 
-环境要求：Docker。开发还需要 Rust（stable）、[bun](https://bun.sh)、git，以及
+环境要求：Docker。开发还需要 Rust（stable）、[bun](https://bun.sh) 1.4+、git，以及
 `cargo install sqlx-cli --no-default-features --features postgres,rustls`。
 
 ## 关于这个仓库

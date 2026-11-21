@@ -27,6 +27,10 @@ async function ask<T>(prompt: Promise<T | symbol>): Promise<T> {
 
 p.intro(styleText(["bgCyan", "black"], ` create-rr-stack ${pkg.version} `));
 
+if (isOlder(Bun.version, "1.4.0")) {
+  p.log.warn(`bun ${Bun.version} is too old for the web build (needs 1.4.0 or newer). Run ${cyan("bun upgrade")} first.`);
+}
+
 // bun and npx cache the package, so a plain `bun create rr-stack` can run an old copy.
 const newest = await latestVersion();
 if (newest && isOlder(pkg.version, newest)) {
@@ -44,19 +48,19 @@ if (!name) {
 const problem = validateName(name);
 if (problem) bail(`"${name}" is not a valid name: ${problem}`);
 
-const ssr = flags.has("--ssr")
-  ? true
-  : interactive
-    ? await ask(
-        p.select({
-          message: "How should pages render?",
-          options: [
-            { value: false, label: "Prerender + SPA", hint: "one Rust binary, no Node at runtime" },
-            { value: true, label: "Server rendering", hint: "every page as HTML per request; adds a bun process" },
-          ],
-        }),
-      )
-    : false;
+const modes = [
+  { value: false, label: "Prerender + SPA", hint: "one Rust binary, no Node at runtime" },
+  { value: true, label: "Server rendering (SSR)", hint: "every page as HTML per request; adds a bun process" },
+];
+const renderQuestion = "How should pages render?";
+let ssr: boolean;
+if (flags.has("--ssr") || flags.has("--spa")) {
+  ssr = flags.has("--ssr");
+  // Shown like an answered prompt, so the choice is on screen even when it came from a flag.
+  p.log.step(`${renderQuestion}\n${dim(modes.find((m) => m.value === ssr)!.label)}`);
+} else {
+  ssr = interactive ? await ask(p.select({ message: renderQuestion, options: modes })) : false;
+}
 const install = flags.has("--no-install") ? false : interactive ? await ask(p.confirm({ message: "Install the web dependencies now?" })) : true;
 const git = flags.has("--no-git") ? false : interactive ? await ask(p.confirm({ message: "Initialize a git repository?" })) : true;
 
@@ -114,6 +118,8 @@ if (git) await run("Initializing a git repository", ["git", "init", "-q", "-b", 
 const where = relative(process.cwd(), dest) || ".";
 p.note(
   [
+    `${dim(ssr ? "Server rendering: pages render in web/server.ts, data in route loaders" : "Prerender + SPA: one Rust binary serves the API and the pages")}`,
+    "",
     `${cyan("cd")} ${where}`,
     `${cyan("bun run dev")}      ${dim("Postgres, the Rust API and the app, together")}`,
     "",

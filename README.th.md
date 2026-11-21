@@ -86,7 +86,7 @@ bun run dev              # Postgres ใน Docker + Rust API + Vite พร้อ
 ที่สร้างจากสัญญา ระบบ sign-in และ playground ที่ทำ CRUD ครบ กรองและค้นหาได้ อัปเดตแบบ optimistic
 อัปเดตสดผ่าน WebSocket และมี error 401/403/404/422 ที่มี type อ่านขั้นตอนการทำงานประจำวันได้ใน `README.md` และ `AGENTS.md` ของโปรเจกต์
 
-สิ่งที่ต้องมี: Docker ถ้าจะพัฒนาต้องมี Rust (stable), [bun](https://bun.sh), git และ
+สิ่งที่ต้องมี: Docker ถ้าจะพัฒนาต้องมี Rust (stable), [bun](https://bun.sh) 1.4+, git และ
 `cargo install sqlx-cli --no-default-features --features postgres,rustls` เพิ่ม
 
 ## repo นี้

@@ -4,8 +4,9 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { generate } from "./gen";
-import { bun, fail, hasSqlx, loadEnv, need, onExit, root, run, serverDir, step, treeDiff, webDir } from "./lib";
+import { bun, fail, hasSqlx, loadEnv, need, needBun, onExit, root, run, serverDir, step, treeDiff, webDir } from "./lib";
 
+needBun();
 loadEnv();
 process.env.SQLX_OFFLINE = "true";
 need("cargo", "https://rustup.rs");
