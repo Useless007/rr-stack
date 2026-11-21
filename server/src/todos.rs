@@ -7,7 +7,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::AppState;
 use crate::auth::CurrentUser;
 use crate::error::{ApiError, AppError, AppJson, AppPath, AppQuery};
-use crate::events::TodoEvent;
+use crate::events::{self, TodoEvent};
 
 /// A title that is already trimmed and 1..=200 characters; it cannot be built any other way.
 #[derive(Deserialize, ToSchema)]
@@ -178,8 +178,7 @@ pub async fn create_todo(
     .fetch_one(&state.db)
     .await?;
     let todo = Todo::from(row);
-    // No receivers is normal (nobody has the page open), so the send result is ignored.
-    let _ = state.events.send(TodoEvent::Created { todo: todo.clone() });
+    events::publish(&state.db, &TodoEvent::Created { todo: todo.clone() }).await;
     Ok((StatusCode::CREATED, AppJson(todo)))
 }
 
@@ -218,7 +217,7 @@ pub async fn update_todo(
         return Err(not_owned_or_missing(&state, id).await);
     };
     let todo = Todo::from(row);
-    let _ = state.events.send(TodoEvent::Updated { todo: todo.clone() });
+    events::publish(&state.db, &TodoEvent::Updated { todo: todo.clone() }).await;
     Ok(AppJson(todo))
 }
 
@@ -250,7 +249,7 @@ pub async fn delete_todo(
     if deleted == 0 {
         return Err(not_owned_or_missing(&state, id).await);
     }
-    let _ = state.events.send(TodoEvent::Deleted { id });
+    events::publish(&state.db, &TodoEvent::Deleted { id }).await;
     Ok(StatusCode::NO_CONTENT)
 }
 

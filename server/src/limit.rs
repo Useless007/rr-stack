@@ -1,105 +1,54 @@
 use axum::extract::{ConnectInfo, FromRequestParts};
 use axum::http::request::Parts;
-use std::collections::{HashMap, VecDeque};
+use sqlx::PgPool;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::sync::Mutex;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-/// Fixed-window counter per client address. In memory: one server process, resets on restart.
-/// shortcut: per-process only; with several replicas, move the counter to Postgres or Redis.
+use crate::AppError;
+
+/// Fixed-window counter per client address, kept in Postgres (`rate_limits`) so that every server
+/// process counts together: several replicas, or the instances a platform such as Vercel starts.
 ///
 /// Per-address limits slow down guessing from one machine; they cannot stop an attacker with many
-/// addresses. Memory is bounded: when full, the oldest window is evicted (O(1) amortised), so a
-/// flood of addresses neither grows memory nor locks out new clients.
-pub struct RateLimiter {
-    state: Mutex<Buckets>,
-    limit: u32,
-    window: Duration,
-    capacity: usize,
+/// addresses. Rows of expired windows are deleted as new windows start, so the table stays small.
+#[derive(Clone)]
+pub struct RateLimit {
+    pub limit: i32,
+    pub window: Duration,
 }
 
-struct Buckets {
-    hits: HashMap<IpAddr, (Instant, u32)>,
-    /// Windows in the order they started. An entry is stale when `hits` holds a newer start for
-    /// that key; stale entries are skipped when they reach the front.
-    order: VecDeque<(IpAddr, Instant)>,
-}
-
-impl Buckets {
-    /// Removes the front window if it is stale or matches `pred`; returns whether it looked at one.
-    fn pop_front_if(&mut self, pred: impl Fn(Instant) -> bool) -> bool {
-        let Some(&(key, start)) = self.order.front() else {
-            return false;
-        };
-        let current = self.hits.get(&key).map(|e| e.0) == Some(start);
-        if current && !pred(start) {
-            return false;
+impl RateLimit {
+    /// Counts one attempt from `ip`; `TooManyRequests` once it is over the limit for this window.
+    pub async fn check(&self, db: &PgPool, ip: IpAddr) -> Result<(), AppError> {
+        let secs = self.window.as_secs_f64();
+        let row = sqlx::query!(
+            r#"INSERT INTO rate_limits AS r (key, window_start, hits) VALUES ($1, now(), 1)
+               ON CONFLICT (key) DO UPDATE SET
+                 window_start = CASE WHEN r.window_start <= now() - make_interval(secs => $2)
+                                THEN now() ELSE r.window_start END,
+                 hits = CASE WHEN r.window_start <= now() - make_interval(secs => $2)
+                        THEN 1 ELSE r.hits + 1 END
+               RETURNING hits,
+                 ceil(extract(epoch FROM r.window_start + make_interval(secs => $2) - now()))::bigint
+                   AS "retry_after!""#,
+            bucket(ip).to_string(),
+            secs
+        )
+        .fetch_one(db)
+        .await?;
+        if row.hits == 1 {
+            sqlx::query!(
+                "DELETE FROM rate_limits WHERE window_start <= now() - make_interval(secs => $1)",
+                secs
+            )
+            .execute(db)
+            .await?;
         }
-        self.order.pop_front();
-        if current {
-            self.hits.remove(&key);
+        if row.hits > self.limit {
+            let retry_after_secs = u64::try_from(row.retry_after).unwrap_or(1).max(1);
+            return Err(AppError::TooManyRequests { retry_after_secs });
         }
-        true
-    }
-}
-
-impl RateLimiter {
-    pub fn new(limit: u32, window: Duration) -> Self {
-        Self::with_capacity(limit, window, 100_000)
-    }
-
-    pub fn with_capacity(limit: u32, window: Duration, capacity: usize) -> Self {
-        let state = Buckets {
-            hits: HashMap::new(),
-            order: VecDeque::new(),
-        };
-        Self {
-            state: Mutex::new(state),
-            limit,
-            window,
-            capacity,
-        }
-    }
-
-    #[cfg(test)]
-    fn tracked(&self) -> usize {
-        self.state.lock().map(|s| s.hits.len()).unwrap_or(0)
-    }
-
-    /// `Ok(())` to proceed, or `Err(seconds)` until this address may try again.
-    pub fn check(&self, ip: IpAddr) -> Result<(), u64> {
-        let key = bucket(ip);
-        let now = Instant::now();
-        let window = self.window;
-        let mut state = self
-            .state
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        // Drop expired windows from the front; each entry is removed once, so this is O(1) amortised.
-        while state.pop_front_if(|start| now.duration_since(start) >= window) {}
-        let current = state
-            .hits
-            .get(&key)
-            .copied()
-            .filter(|(start, _)| now.duration_since(*start) < window);
-        let (start, count) = match current {
-            Some(entry) => entry,
-            None => {
-                while state.hits.len() >= self.capacity && state.pop_front_if(|_| true) {}
-                state.order.push_back((key, now));
-                (now, 0)
-            }
-        };
-        let count = count + 1;
-        state.hits.insert(key, (start, count));
-        if count > self.limit {
-            Err(window
-                .saturating_sub(now.duration_since(start))
-                .as_secs()
-                .max(1))
-        } else {
-            Ok(())
-        }
+        Ok(())
     }
 }
 
@@ -184,28 +133,6 @@ mod tests {
         );
         assert_eq!(one("203.0.113.7"), Some("203.0.113.7".parse().unwrap()));
         assert_eq!(one("garbage"), None);
-    }
-
-    #[test]
-    fn a_full_table_evicts_the_oldest_client_and_still_counts_the_new_one() {
-        let limiter = RateLimiter::with_capacity(1, Duration::from_secs(60), 3);
-        for i in 0..3u8 {
-            assert!(limiter.check(IpAddr::from([10, 0, 0, i])).is_ok());
-        }
-        let newcomer = IpAddr::from([10, 0, 0, 99]);
-        assert!(
-            limiter.check(newcomer).is_ok(),
-            "no global lockout when full"
-        );
-        assert!(
-            limiter.check(newcomer).is_err(),
-            "the newcomer is counted, so it is limited too"
-        );
-        assert_eq!(limiter.tracked(), 3, "memory stays bounded");
-        assert!(
-            limiter.check(IpAddr::from([10, 0, 0, 0])).is_ok(),
-            "the oldest entry was the one evicted"
-        );
     }
 
     #[test]

@@ -208,7 +208,7 @@ pub async fn register(
     jar: CookieJar,
     AppJson(creds): AppJson<Credentials>,
 ) -> Result<(StatusCode, CookieJar, AppJson<User>), AppError> {
-    limit(&state, ip)?;
+    limit(&state, ip).await?;
     let hash = hash_password(creds.password).await?;
     let user = sqlx::query_as!(
         User,
@@ -241,7 +241,7 @@ pub async fn login(
     jar: CookieJar,
     AppJson(creds): AppJson<Credentials>,
 ) -> Result<(CookieJar, AppJson<User>), AppError> {
-    limit(&state, ip)?;
+    limit(&state, ip).await?;
     let found = sqlx::query!(
         "SELECT id, email, password_hash FROM users WHERE email = $1",
         creds.email.0
@@ -312,9 +312,6 @@ pub async fn me(CurrentUser(user): CurrentUser) -> AppJson<User> {
 }
 
 /// Caps password guessing (and Argon2 work) per client address.
-fn limit(state: &AppState, ip: std::net::IpAddr) -> Result<(), AppError> {
-    state
-        .sign_in_limit
-        .check(ip)
-        .map_err(|retry_after_secs| AppError::TooManyRequests { retry_after_secs })
+async fn limit(state: &AppState, ip: std::net::IpAddr) -> Result<(), AppError> {
+    state.sign_in_limit.check(&state.db, ip).await
 }

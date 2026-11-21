@@ -308,3 +308,30 @@ async fn too_many_sign_in_attempts_from_one_address_get_429(db: PgPool) {
         "other addresses are not affected"
     );
 }
+
+/// The count is in the database: several server processes share it, so a client cannot get more
+/// attempts by landing on a different one.
+#[sqlx::test]
+async fn the_sign_in_limit_counts_across_server_processes(db: PgPool) {
+    use tower::ServiceExt;
+    for i in 0..11 {
+        // A new AppState per attempt stands in for a new server process.
+        let req = axum::http::Request::post("/api/auth/login")
+            .header(axum::http::header::CONTENT_TYPE, "application/json")
+            .body(axum::body::Body::from(
+                json!({ "email": "x@example.com", "password": "wrong password" }).to_string(),
+            ))
+            .unwrap();
+        let status = server::app(server::AppState::new(db.clone()), None)
+            .oneshot(req)
+            .await
+            .unwrap()
+            .status();
+        let want = if i < 10 {
+            StatusCode::UNAUTHORIZED
+        } else {
+            StatusCode::TOO_MANY_REQUESTS
+        };
+        assert_eq!(status, want, "attempt {}", i + 1);
+    }
+}

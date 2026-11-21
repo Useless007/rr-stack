@@ -33,6 +33,16 @@ pub async fn call(
         None => req.body(Body::empty()),
     }
     .unwrap();
+    // A different client address per call: the sign-in limit (10 per minute per address, counted in
+    // the database) is tested on its own and must not trip tests that sign up many users.
+    static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1);
+    let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let mut req = req;
+    req.extensions_mut()
+        .insert(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+            std::net::Ipv4Addr::from(0x0a00_0000 | n),
+            1,
+        ))));
     let res = app(AppState::new(db.clone()), None)
         .oneshot(req)
         .await

@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO rate_limits AS r (key, window_start, hits) VALUES ($1, now(), 1)\n               ON CONFLICT (key) DO UPDATE SET\n                 window_start = CASE WHEN r.window_start <= now() - make_interval(secs => $2)\n                                THEN now() ELSE r.window_start END,\n                 hits = CASE WHEN r.window_start <= now() - make_interval(secs => $2)\n                        THEN 1 ELSE r.hits + 1 END\n               RETURNING hits,\n                 ceil(extract(epoch FROM r.window_start + make_interval(secs => $2) - now()))::bigint\n                   AS \"retry_after!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "hits",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rate_limits",
+            "name": "hits"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "retry_after!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "540ef32d08cd4f7561cdc6c19755262bab322f1f4f9b6a9d12583e1f6abbd630"
+}

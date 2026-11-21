@@ -18,20 +18,23 @@ use utoipa_axum::routes;
 #[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,
-    pub events: tokio::sync::broadcast::Sender<events::TodoEvent>,
-    /// Sign-in and sign-up attempts per client address: 10 per minute.
-    pub sign_in_limit: std::sync::Arc<limit::RateLimiter>,
+    pub events: std::sync::Arc<events::Hub>,
+    /// Sign-in and sign-up attempts per client address per minute: SIGN_IN_LIMIT, default 10.
+    pub sign_in_limit: limit::RateLimit,
 }
 
 impl AppState {
     pub fn new(db: PgPool) -> Self {
         Self {
             db,
-            events: events::channel(),
-            sign_in_limit: std::sync::Arc::new(limit::RateLimiter::new(
-                10,
-                std::time::Duration::from_secs(60),
-            )),
+            events: std::sync::Arc::new(events::Hub::new()),
+            sign_in_limit: limit::RateLimit {
+                limit: std::env::var("SIGN_IN_LIMIT")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(10),
+                window: std::time::Duration::from_secs(60),
+            },
         }
     }
 }

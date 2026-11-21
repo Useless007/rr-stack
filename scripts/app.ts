@@ -25,7 +25,13 @@ export async function startApp(): Promise<App> {
   const base = `http://127.0.0.1:${port}`;
   // Apps created with --ssr render pages in web/server.ts; the Rust server forwards to it.
   const ssr = existsSync(join(webDir, "server.ts"));
-  const env: Record<string, string | undefined> = { ...process.env, PORT: String(port), WEB_DIST: join(webDir, "build", "client") };
+  const env: Record<string, string | undefined> = {
+    ...process.env,
+    PORT: String(port),
+    WEB_DIST: join(webDir, "build", "client"),
+    // The sign-in limit is counted in the database, so back-to-back test runs would share it.
+    SIGN_IN_LIMIT: "1000",
+  };
   let renderer: ReturnType<typeof Bun.spawn> | undefined;
   if (ssr) {
     const webPort = await freePort();
