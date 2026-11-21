@@ -29,3 +29,11 @@ fn openapi_lists_health() {
         spec["paths"]
     );
 }
+
+#[test]
+fn contract_info_does_not_depend_on_the_package_name() {
+    // create-rr-stack renames the Cargo package; the contract must not change when it does.
+    let spec = serde_json::to_value(openapi()).unwrap();
+    assert_eq!(spec["info"]["title"], "API");
+    assert!(!spec["info"].to_string().contains("rr-server"));
+}

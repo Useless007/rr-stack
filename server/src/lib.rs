@@ -38,9 +38,18 @@ impl AppState {
     }
 }
 
-/// Schemas that no HTTP route returns but clients still need typed (WebSocket messages).
+/// The contract's header, plus schemas that no HTTP route returns but clients still need typed
+/// (WebSocket messages). `info` is spelled out: derived from Cargo it would change whenever the
+/// package is renamed, which `create-rr-stack` does for every new project.
 #[derive(utoipa::OpenApi)]
-#[openapi(components(schemas(events::TodoEvent)))]
+#[openapi(
+    info(
+        title = "API",
+        version = "1.0.0",
+        description = "HTTP API of this app. Generated from the Rust handlers."
+    ),
+    components(schemas(events::TodoEvent))
+)]
 struct ExtraSchemas;
 
 /// Every API route is registered here; the OpenAPI spec and the runtime router both come from it.

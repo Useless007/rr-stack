@@ -1,12 +1,12 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "rr-server",
-    "description": "",
+    "title": "API",
+    "description": "HTTP API of this app. Generated from the Rust handlers.",
     "license": {
       "name": ""
     },
-    "version": "0.1.0"
+    "version": "1.0.0"
   },
   "paths": {
     "/api/auth/login": {
