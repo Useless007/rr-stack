@@ -11,8 +11,9 @@ use sqlx::PgPool;
 use tower::ServiceExt;
 
 /// A build/client dir with one prerendered page, one asset and the SPA shell.
-fn dist() -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("rr-pages-{}", std::process::id()));
+/// One dir per test: the tests run in parallel and would otherwise rewrite each other's files.
+fn dist(test: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("rr-pages-{}-{test}", std::process::id()));
     std::fs::create_dir_all(dir.join("assets")).unwrap();
     std::fs::write(dir.join("index.html"), "prerendered home").unwrap();
     std::fs::write(dir.join("assets/app.js"), "asset").unwrap();
@@ -53,7 +54,7 @@ fn at(path: &str) -> Request<Body> {
 
 #[sqlx::test]
 async fn spa_mode_serves_files_then_the_shell(db: PgPool) {
-    let app = app(AppState::new(db), Some(Pages::Spa(dist())));
+    let app = app(AppState::new(db), Some(Pages::Spa(dist("spa"))));
     assert_eq!(get(app.clone(), at("/")).await.1, "prerendered home");
     assert_eq!(get(app.clone(), at("/assets/app.js")).await.1, "asset");
     assert_eq!(get(app, at("/app/todos/7")).await.1, "spa shell");
@@ -62,7 +63,7 @@ async fn spa_mode_serves_files_then_the_shell(db: PgPool) {
 #[sqlx::test]
 async fn ssr_mode_sends_other_paths_to_the_renderer(db: PgPool) {
     let pages = Pages::Ssr {
-        dist: dist(),
+        dist: dist("ssr"),
         upstream: renderer().await,
     };
     let app = app(AppState::new(db), Some(pages));
@@ -106,7 +107,7 @@ async fn ssr_mode_without_a_renderer_is_a_502(db: PgPool) {
     let app = app(
         AppState::new(db),
         Some(Pages::Ssr {
-            dist: dist(),
+            dist: dist("down"),
             upstream,
         }),
     );
