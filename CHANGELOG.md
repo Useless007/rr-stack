@@ -3,7 +3,12 @@
 Versions are the `create-rr-stack` package on npm. A version changes what new projects start
 with; existing projects are not updated.
 
-## 0.3.0 (unreleased)
+## 0.3.1 (2026-11-21)
+
+- The npm page's links to the translated READMEs, CONTRIBUTING and LICENSE open on GitHub
+  instead of 404. A test keeps `README.md` free of relative links.
+
+## 0.3.0 (2026-11-21)
 
 - Sign-in: register, login, logout and `me`, with Argon2id password hashes and an HttpOnly,
   SameSite=Lax session cookie whose token is stored only as a SHA-256 hash. `CurrentUser` extractor

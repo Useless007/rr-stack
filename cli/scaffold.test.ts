@@ -150,3 +150,11 @@ describe("create-rr-stack (non-interactive)", () => {
     expect(readFileSync(join(cwd, "mine", "keep.txt"), "utf8")).toBe("mine");
   });
 });
+
+describe("npm README", () => {
+  // npm resolves relative links against repository.directory (cli/), where these files do not exist.
+  test("README.md has no relative links", () => {
+    const readme = readFileSync(join(repoRoot, "README.md"), "utf8");
+    expect(readme.match(/(\]\(|href=")(?!https?:|#)[^)"]+/g) ?? []).toEqual([]);
+  });
+});

@@ -3,10 +3,10 @@
 <p>
   <a href="https://www.npmjs.com/package/create-rr-stack"><img alt="npm" src="https://img.shields.io/npm/v/create-rr-stack?color=3fb6a8"></a>
   <a href="https://github.com/Useless007/rr-stack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Useless007/rr-stack/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-0e1a2b"></a>
+  <a href="https://github.com/Useless007/rr-stack/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-0e1a2b"></a>
 </p>
 
-**English** · [ไทย](README.th.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md)
+**English** · [ไทย](https://github.com/Useless007/rr-stack/blob/main/README.th.md) · [简体中文](https://github.com/Useless007/rr-stack/blob/main/README.zh-CN.md) · [日本語](https://github.com/Useless007/rr-stack/blob/main/README.ja.md)
 
 React Router + Rust (Axum), typed from the database to the screen.
 
@@ -109,7 +109,7 @@ openapi.json           generated contract
 ## Contributing
 
 Contributions are welcome, from people and from agents working for them. Start with
-[CONTRIBUTING.md](CONTRIBUTING.md). The short version:
+[CONTRIBUTING.md](https://github.com/Useless007/rr-stack/blob/main/CONTRIBUTING.md). The short version:
 
 1. Open an issue first for anything bigger than a fix, so we agree on the shape.
 2. `bun run check` must exit 0. CI runs it on Linux and Windows.
@@ -118,4 +118,4 @@ Contributions are welcome, from people and from agents working for them. Start w
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/Useless007/rr-stack/blob/main/LICENSE)
