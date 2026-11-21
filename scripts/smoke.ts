@@ -1,61 +1,13 @@
 // Builds the web app, runs the real server binary, and checks what a browser and an API client get.
-import { $ } from "bun";
-import { existsSync } from "node:fs";
-import { createServer } from "node:net";
-import { join } from "node:path";
-import { bun, exe, fail, loadEnv, needBun, onExit, run, serverDir, webDir } from "./lib";
+import { startApp } from "./app";
+import { fail, loadEnv, needBun } from "./lib";
 
 needBun();
 loadEnv();
-if (!process.env.DATABASE_URL) fail("DATABASE_URL is not set (copy .env.example to .env)");
 
-await run($`${bun} run build`.cwd(webDir), true);
-await run($`cargo build -q --bin server`.cwd(serverDir), true);
-
-const freePort = () =>
-  new Promise<number>((resolve) => {
-    const s = createServer().listen(0, "127.0.0.1", () => {
-      const { port } = s.address() as { port: number };
-      s.close(() => resolve(port));
-    });
-  });
-const port = await freePort();
-const base = `http://127.0.0.1:${port}`;
-
-// Apps created with --ssr render pages in web/server.ts; the Rust server forwards to it.
-const ssr = existsSync(join(webDir, "server.ts"));
-const env: Record<string, string | undefined> = { ...process.env, PORT: String(port), WEB_DIST: join(webDir, "build", "client") };
-let renderer: ReturnType<typeof Bun.spawn> | undefined;
-if (ssr) {
-  const webPort = await freePort();
-  renderer = Bun.spawn([bun, "server.ts"], {
-    cwd: webDir,
-    env: { ...process.env, WEB_PORT: String(webPort), API_URL: base },
-    stdout: "ignore",
-    stderr: "inherit",
-  });
-  onExit(() => renderer?.kill());
-  env.WEB_SSR_URL = `http://127.0.0.1:${webPort}`;
-}
-const server = Bun.spawn([join(serverDir, "target", "debug", `server${exe}`)], { env, stdout: "ignore", stderr: "pipe" });
-onExit(() => server.kill());
+const { base, port, ssr, stop } = await startApp();
 
 try {
-  let up = false;
-  for (let i = 0; i < 100 && !up; i++) {
-    up = await fetch(`${base}/api/health`).then((r) => r.ok, () => false);
-    if (!up) await Bun.sleep(100);
-  }
-  // The renderer imports the whole server build, which can take longer than Rust's start.
-  for (let i = 0; i < 100 && up && env.WEB_SSR_URL; i++) {
-    if (await fetch(env.WEB_SSR_URL).then(() => true, () => false)) break;
-    await Bun.sleep(100);
-  }
-  if (!up) {
-    server.kill();
-    fail(`server did not start:\n${await new Response(server.stderr).text()}`);
-  }
-
   const expect = async (path: string, status: number, init?: RequestInit) => {
     const res = await fetch(base + path, init);
     if (res.status !== status) fail(`smoke FAIL: ${init?.method ?? "GET"} ${path} returned ${res.status}, want ${status}`);
@@ -110,6 +62,5 @@ try {
   await expect("/api/auth/logout", 204, { method: "POST", headers: json });
   console.log(`smoke OK${ssr ? " (ssr)" : ""}`);
 } finally {
-  server.kill();
-  renderer?.kill();
+  stop();
 }

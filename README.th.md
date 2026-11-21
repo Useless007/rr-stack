@@ -54,6 +54,7 @@ repo นี้ทำไว้ให้
 | ตอบ error เป็น JSON ที่มี type แทนข้อความธรรมดา เมื่อ input ผิดหรือไม่มี route | `AppJson`, `AppPath`, `AppQuery` และ JSON 404/405 |
 | เสิร์ฟหน้า prerender, SPA และ API จาก binary เดียว | Axum พร้อม SPA fallback มี test เรื่องเปิดลิงก์ตรง |
 | ให้ search engine หาเจอ และแชร์ลิงก์แล้วขึ้นการ์ดสวย | canonical, การ์ด Open Graph, `sitemap.xml` และ `robots.txt` สร้างจากรายการหน้าสาธารณะชุดเดียว หน้าส่วนตัวมี `noindex` และ `--ssr` ตอบ 404 จริง |
+| ตรวจหน้าเว็บใน browser จริง ไม่ใช่แค่ compile ผ่าน | `bun run e2e`: Playwright บน bun (ไม่ต้องมี Node) เปิดทุกหน้าและทำตั้งแต่สมัครจนลบ todo ถ้ามี JS error, hydration ไม่ตรง หรือ 5xx จะ fail พร้อมภาพหน้าจอ |
 | ใช้คำสั่งชุดเดียวกันบน Windows และ Linux | สคริปต์ bun, ขึ้นบรรทัดแบบ LF, CI ทั้งสองระบบ |
 | บอก AI agent ว่า "เสร็จ" คืออะไร และห้ามแตะไฟล์ไหน | `AGENTS.md` และคำสั่งตรวจคำสั่งเดียว |
 | ระบบ login ที่ปลอดภัยตั้งแต่ต้น | hash ด้วย Argon2id, cookie แบบ HttpOnly SameSite, เก็บ session token แบบ hash, ตรวจเจ้าของใน SQL |
@@ -105,7 +106,7 @@ repo นี้เป็นสองอย่างในตัวเดียว
 ```
 server/                Rust API (Axum, utoipa, SQLx) และ integration test
 web/                   แอป React Router; web/app/api/ เป็นไฟล์ที่ generate
-scripts/               สคริปต์ bun ที่อยู่เบื้องหลัง bun run dev / check / smoke / gen
+scripts/               สคริปต์ bun ที่อยู่เบื้องหลัง bun run dev / check / smoke / e2e / gen
 cli/                   create-rr-stack: index.ts (คำถาม), scaffold.ts (คัดลอก + เปลี่ยนชื่อ), test
 openapi.json           สัญญาที่ generate
 .github/workflows/     CI บน Linux และ Windows กับ docker compose; ติดไปกับโปรเจกต์ใหม่ด้วย

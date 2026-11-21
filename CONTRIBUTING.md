@@ -31,6 +31,7 @@ created after the next release, so treat files outside `cli/` as public API.
 | A Rust handler or a type that crosses the wire | `bun run gen` and commit `openapi.json` and `web/app/api/` |
 | SQL in a `query!` | `cargo sqlx prepare -- --all-targets` in `server/`, commit `server/.sqlx/` |
 | How pages or files are served | `bun run smoke` |
+| Anything under `web/app`, or a page in `cli/astryx/files/` or `cli/ssr/` | `bun run e2e` (in a scaffolded app for the overlays) |
 | A file the CLI renames (`compose.yml`, `.env.example`, `Cargo.toml`, `package.json`) | `bun test` in `cli/`; `scaffold.ts` fails loudly if a string it replaces has moved |
 | `cli/project-readme.md` | it becomes the README of every new project |
 | `README.md` | update the translations, or list the stale ones in the PR |

@@ -14,6 +14,13 @@ with; existing projects are not updated.
   `docker compose`): the public address these absolute URLs are built from.
 - A prerendered page is served at its own URL (`/how-it-works`) instead of a 307 redirect to
   `/how-it-works/`, so canonical links and the sitemap name a page, not a redirect.
+- Browser tests: `bun run e2e` builds the app, runs it, and drives a real Chromium through
+  Playwright on bun (no Node). It opens every page cold, signs up, adds, completes, searches, edits
+  and deletes a todo, checks that a second browser sees new todos live and cannot change someone
+  else's, and fails on any JavaScript error, React hydration mismatch or 5xx response. Failing tests
+  leave screenshots in `web/e2e/results/`. Chromium downloads on the first run. CI runs it on Linux
+  and Windows and for `--ssr` and `--astryx` apps. AGENTS.md tells agents to run it after any page
+  change.
 - Includes 0.5.1, which was not published on its own.
 
 ## 0.5.1 (2026-11-22)

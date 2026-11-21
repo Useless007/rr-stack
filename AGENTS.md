@@ -6,6 +6,11 @@ React (React Router, `web/`) + Rust (Axum, `server/`), typed end to end through 
 
 - Run `bun run check` and read its output. Exit 0 is the only "done".
 - Changed how the server serves pages or files? Also run `bun run smoke`.
+- Changed anything under `web/app`? Also run `bun run e2e`: a real browser opens every page and
+  walks the todo flow, and fails on any JavaScript error, hydration mismatch or 5xx. A failing test
+  saves screenshots in `web/e2e/results/`: look at them before changing code.
+- New page: add its path to `web/e2e/pages.test.ts`. New user flow: add a test in `web/e2e/` that
+  finds elements by role and label (`getByRole`, `getByLabel`), never by CSS class.
 - Do not claim success from "it compiles" or from reading the diff.
 
 ## Never edit these by hand

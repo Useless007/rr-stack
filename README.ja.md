@@ -55,6 +55,7 @@ AI エージェントが持ち込むバグの多くは、2 つの層の食い違
 | 不正な入力や未知のルートに、プレーンテキストではなく型付き JSON を返す | `AppJson`、`AppPath`、`AppQuery` と JSON 404/405 |
 | プリレンダリングしたページ、SPA、API を 1 つのバイナリで配信する | SPA フォールバック付きの Axum。ディープリンクもテスト済み |
 | 検索エンジンに見つけてもらい、共有時にカードを表示する | canonical、Open Graph カード、`sitemap.xml`、`robots.txt` を公開ページの一覧 1 つから生成。非公開ページは `noindex`、`--ssr` では本当の 404 |
+| コンパイルだけでなく、実際のブラウザでページを確認する | `bun run e2e`：bun 上の Playwright（Node 不要）が全ページを開き、登録から削除までを操作。JS エラー、hydration の不一致、5xx があれば失敗し、スクリーンショットを残す |
 | Windows と Linux で同じコマンドを使う | bun スクリプト、LF 改行、両 OS での CI |
 | AI エージェントに「完了」の定義と触ってはいけないファイルを伝える | `AGENTS.md` とひとつのチェックコマンド |
 | 最初から安全なサインイン | Argon2id ハッシュ、HttpOnly SameSite cookie、ハッシュ化したセッショントークン、SQL での所有者チェック |
@@ -109,7 +110,7 @@ WebSocket によるリアルタイム更新・型付き 401/403/404/422 エラ�
 ```
 server/                Rust API（Axum、utoipa、SQLx）と結合テスト
 web/                   React Router アプリ。web/app/api/ は生成コード
-scripts/               bun run dev / check / smoke / gen を支える bun スクリプト
+scripts/               bun run dev / check / smoke / e2e / gen を支える bun スクリプト
 cli/                   create-rr-stack：index.ts（対話）、scaffold.ts（コピーと名前変更）、テスト
 openapi.json           生成されたコントラクト
 .github/workflows/     Linux と Windows の CI、docker compose。新しいプロジェクトにもコピーされます

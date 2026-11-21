@@ -52,6 +52,7 @@ AI agent 引入的大多数 bug，本质上是两层之间不一致：改了列�
 | 对错误输入和未知路由返回带类型的 JSON，而不是纯文本 | `AppJson`、`AppPath`、`AppQuery` 以及 JSON 404/405 |
 | 用一个二进制同时提供预渲染页面、SPA 和 API | 带 SPA fallback 的 Axum；深层链接有测试 |
 | 让搜索引擎找到，分享时显示卡片 | canonical 链接、Open Graph 卡片、`sitemap.xml` 和 `robots.txt` 都来自同一份公开页面列表；私有页面带 `noindex`；`--ssr` 返回真正的 404 |
+| 在真实浏览器里检查页面，而不只是能编译 | `bun run e2e`：在 bun 上运行 Playwright（不需要 Node），打开每个页面，走完从注册到删除的流程；任何 JS 错误、hydration 不一致或 5xx 都会失败，并附截图 |
 | 在 Windows 和 Linux 上使用同一套命令 | bun 脚本、LF 换行、两个系统都跑 CI |
 | 告诉 AI agent 什么叫"完成"、哪些文件不能动 | `AGENTS.md` 和一条检查命令 |
 | 默认安全的登录 | Argon2id 哈希、HttpOnly SameSite cookie、只存哈希的会话令牌、在 SQL 中检查所有者 |
@@ -101,7 +102,7 @@ bun run dev              # Docker 中的 Postgres + Rust API + Vite，支持热�
 ```
 server/                Rust API（Axum、utoipa、SQLx）及其集成测试
 web/                   React Router 应用；web/app/api/ 为生成代码
-scripts/               bun run dev / check / smoke / gen 背后的 bun 脚本
+scripts/               bun run dev / check / smoke / e2e / gen 背后的 bun 脚本
 cli/                   create-rr-stack：index.ts（交互提示）、scaffold.ts（复制与重命名）、测试
 openapi.json           生成的契约
 .github/workflows/     Linux 和 Windows 上的 CI 以及 docker compose；会复制到新项目中

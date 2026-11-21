@@ -52,6 +52,18 @@ jobs:
 
       - run: bun run check
       - run: bun run smoke
+      - name: browser for the e2e tests (Linux also needs its system libraries)
+        shell: bash
+        run: bun --bun playwright-core install ${{ runner.os == 'Linux' && '--with-deps' || '' }} --only-shell chromium
+        working-directory: web
+      - run: bun run e2e
+      - name: screenshots of failing e2e pages
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-results-${{ matrix.os }}
+          path: web/e2e/results/
+          if-no-files-found: ignore
 
       - name: scaffold a project with the CLI and check it
         if: hashFiles('cli/package.json') != ''
@@ -62,7 +74,7 @@ jobs:
           cd ci-demo
           SKIP_DB=1 bun run check
 
-      - name: scaffold a --ssr project, check it and smoke-test the rendered pages
+      - name: scaffold a --ssr project, check it, smoke-test and e2e-test the rendered pages
         if: hashFiles('cli/package.json') != ''
         shell: bash
         run: |
@@ -73,8 +85,9 @@ jobs:
           cd ci-ssr
           bun run check
           bun run smoke
+          bun run e2e
 
-      - name: scaffold --astryx projects (SPA and SSR), check them and smoke-test them
+      - name: scaffold --astryx projects (SPA and SSR), check, smoke-test and e2e-test them
         if: hashFiles('cli/package.json') != ''
         shell: bash
         run: |
@@ -82,7 +95,7 @@ jobs:
           cd "$RUNNER_TEMP"
           for mode in spa ssr; do
             bun "$GITHUB_WORKSPACE/cli/index.ts" ci-astryx-$mode --$mode --astryx --yes --no-git
-            (cd ci-astryx-$mode && bun run check && bun run smoke)
+            (cd ci-astryx-$mode && bun run check && bun run smoke && bun run e2e)
           done
 
   docker:

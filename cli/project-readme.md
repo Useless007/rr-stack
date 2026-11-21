@@ -81,6 +81,7 @@ database keeps running. The first run compiles the Rust server, which takes a mi
 | `bun run dev` | (keeps running) | you are working on the app |
 | `bun run check` | fmt, clippy, contract, typecheck, web build, `.sqlx`, tests all pass | before you call anything done |
 | `bun run smoke` | the real binary serves pages, deep links and the API over HTTP | you changed how files or routes are served |
+| `bun run e2e` | a real browser opened every page and walked the todo flow with no errors; screenshots of failures in `web/e2e/results/` | you changed anything under `web/app` |
 | `bun run gen` | `openapi.json` and `web/app/api/` regenerated | you changed a handler or a type that crosses the wire |
 | `cargo sqlx prepare -- --all-targets`, run in `server/` | `server/.sqlx/` matches the SQL | you added or changed a query |
 | `docker compose up -d` | the whole app runs in containers | you want to run it without a toolchain |
