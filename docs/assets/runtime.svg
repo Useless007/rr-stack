@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="250" viewBox="0 0 1000 250" font-family="IBM Plex Sans, Segoe UI, Helvetica, Arial, sans-serif">
+  <title>At runtime one Rust binary serves the API and the pages</title>
+  <rect width="1000" height="250" rx="14" fill="#eef2f6"/>
+  <defs>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#17695f"/></marker>
+  </defs>
+  <g fill="#0e1a2b" font-size="13">
+    <rect x="28" y="88" width="132" height="72" rx="10" fill="#fff" stroke="#0e1a2b" stroke-opacity=".18"/>
+    <text x="94" y="130" text-anchor="middle" font-size="16" font-weight="600">Browser</text>
+
+    <rect x="214" y="24" width="572" height="200" rx="12" fill="#fff" stroke="#17695f" stroke-width="2"/>
+    <text x="238" y="54" font-size="16" font-weight="600">server</text>
+    <text x="300" y="54" fill-opacity=".7">one Rust binary (Axum), no Node at runtime</text>
+
+    <rect x="238" y="72" width="524" height="62" rx="8" fill="#eef2f6"/>
+    <text x="254" y="98" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" fill="#17695f">/api/*</text>
+    <text x="324" y="98" font-weight="600">handlers</text>
+    <text x="254" y="120" fill-opacity=".7">JSON in and out. Unknown paths and bad input get a typed JSON error.</text>
+
+    <rect x="238" y="146" width="524" height="62" rx="8" fill="#eef2f6"/>
+    <text x="254" y="172" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" fill="#17695f">everything else</text>
+    <text x="388" y="172" font-weight="600">web/build/client</text>
+    <text x="254" y="194" fill-opacity=".7">Prerendered HTML for SEO pages; the SPA shell for the rest, so deep links work.</text>
+
+    <rect x="840" y="72" width="132" height="62" rx="10" fill="#fff" stroke="#0e1a2b" stroke-opacity=".18"/>
+    <text x="906" y="109" text-anchor="middle" font-size="16" font-weight="600">Postgres</text>
+  </g>
+  <g stroke="#17695f" stroke-width="2" marker-end="url(#b)" fill="none">
+    <path d="M160 112 C190 112 200 103 234 103"/>
+    <path d="M160 136 C190 136 200 177 234 177"/>
+    <line x1="764" y1="103" x2="836" y2="103"/>
+  </g>
+</svg>

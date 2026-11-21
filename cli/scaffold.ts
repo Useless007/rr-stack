@@ -24,8 +24,10 @@ export function appPort(name: string): number {
   return dbPort(name) + 1000;
 }
 
-// Tracked in the template repo but not part of a new project.
-const SKIP_TOP = new Set(["cli", "docs"]);
+// Tracked in the template repo but not part of a new project: the CLI, and the repo's own
+// docs for contributors (README in every language, CONTRIBUTING, the template's license).
+const SKIP_TOP = new Set(["cli", "docs", "CONTRIBUTING.md", "LICENSE"]);
+const isRepoReadme = (file: string) => /^README(\.[\w-]+)?\.md$/.test(file);
 // npm never ships files named .gitignore, so the template stores them under this name.
 const GITIGNORE = "_gitignore";
 
@@ -33,12 +35,14 @@ const GITIGNORE = "_gitignore";
 export async function buildTemplate(repo: string, out: string): Promise<void> {
   const files = execFileSync("git", ["ls-files", "-z"], { cwd: repo, encoding: "utf8" })
     .split("\0")
-    .filter((f) => f && !SKIP_TOP.has(f.split("/")[0] ?? "") && existsSync(join(repo, f)));
+    .filter((f) => f && !SKIP_TOP.has(f.split("/")[0] ?? "") && !isRepoReadme(f) && existsSync(join(repo, f)));
   for (const file of files) {
     const target = join(out, file.replace(/(^|\/)\.gitignore$/, `$1${GITIGNORE}`));
     await mkdir(dirname(target), { recursive: true });
     await copyFile(join(repo, file), target);
   }
+  // A new project gets a README about the project; the repo README is about RR stack itself.
+  await copyFile(join(repo, "cli", "project-readme.md"), join(out, "README.md"));
 }
 
 export async function scaffold(opts: { name: string; dest: string; source: string }): Promise<void> {

@@ -102,6 +102,17 @@ describe("scaffold", () => {
     expect(ci).not.toContain("localhost:5432/rr");
   });
 
+  test("gives a project its own README, not the repo's contributor docs", async () => {
+    const dest = freshDir();
+    await scaffold({ name: "demo", dest, source: template });
+    for (const gone of ["CONTRIBUTING.md", "README.th.md", "README.zh-CN.md", "README.ja.md", "LICENSE"]) {
+      expect(existsSync(join(dest, gone))).toBeFalse();
+    }
+    const readme = readFileSync(join(dest, "README.md"), "utf8");
+    expect(readme).toContain("bun run dev");
+    expect(readme).not.toContain("Contributing");
+  });
+
   test("titles the README with the project name", async () => {
     const dest = freshDir();
     await scaffold({ name: "my-app", dest, source: template });

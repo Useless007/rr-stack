@@ -1,4 +1,12 @@
-# RR stack
+<h1>RR stack</h1>
+
+<p>
+  <a href="https://www.npmjs.com/package/create-rr-stack"><img alt="npm" src="https://img.shields.io/npm/v/create-rr-stack?color=3fb6a8"></a>
+  <a href="https://github.com/Useless007/rr-stack/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Useless007/rr-stack/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-0e1a2b"></a>
+</p>
+
+**English** · [ไทย](README.th.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md)
 
 React Router + Rust (Axum), typed from the database to the screen.
 
@@ -6,128 +14,100 @@ React Router + Rust (Axum), typed from the database to the screen.
 bun create rr-stack my-app
 ```
 
-Made for a team where AI agents write most of the code and people review it. One command,
+RR stack is a starter for apps that AI agents write and people review. One command,
 `bun run check`, answers "is it done?". If it exits 0, the SQL, the Rust API, the OpenAPI
-contract and the React code agree with each other.
+contract and the React code agree with each other. It runs the same on Windows, macOS and Linux.
 
-Works the same on Windows, macOS and Linux: every project command is a bun script.
+## Why
 
-> **If you are an AI agent:** read this file for the map, then follow `AGENTS.md` in the project root.
-> Your task is done only when `bun run check` exits 0.
+Most bugs an AI agent ships are two layers disagreeing: a renamed column, a field the client still
+sends, an error shape nobody handles. RR stack moves each of those to compile time:
 
-## What you get
-
-| Layer | Tool | What is checked, and when |
+| Layer | Tool | Checked by |
 |---|---|---|
-| Database | Postgres + SQLx `query!` | SQL against the real schema, at compile time |
-| API | Axum + utoipa | `openapi.json` is derived from the Rust handlers |
-| Contract | `openapi.json` | regenerated and diffed on every check |
-| Client | hey-api + TanStack Query | TS client, hooks and typed errors generated from the contract |
-| UI | React Router (`ssr: false` + `prerender`) | `tsc --noEmit` and a full build |
+| Database | Postgres + SQLx `query!` | the Rust compiler, against the real schema |
+| API | Axum + utoipa | `openapi.json` is derived from the handlers |
+| Contract | `openapi.json` | regenerated and diffed on every `bun run check` |
+| Client | hey-api + TanStack Query | generated from the contract, including typed errors |
+| UI | React Router (`ssr: false` + `prerender`) | `tsc` and a full build |
 
-A new project is a small working site about the stack itself, with one example of each thing you
-will need:
+In production it is one process: Axum serves the API and the built pages. No Node at runtime.
 
-| Page | Shows |
+## How it works
+
+![How a change travels from the database to the screen, and where bun run check verifies it](https://raw.githubusercontent.com/Useless007/rr-stack/main/docs/assets/change-flow.svg)
+
+![At runtime one Rust binary serves the API and the pages](https://raw.githubusercontent.com/Useless007/rr-stack/main/docs/assets/runtime.svg)
+
+## Why not wire it yourself?
+
+You can. Every piece is a normal, popular library. What takes the time is the glue between them,
+and the glue is what this repo is:
+
+| You would need to | RR stack ships |
 |---|---|
-| `/` | a prerendered landing page with a live API status |
-| `/how-it-works` | prerendered; the layers and how a change travels through them |
-| `/api-reference` | prerendered from `openapi.json` at build time, no API call |
-| `/app` | dashboard: an aggregate SQL query (`GET /api/stats`) |
-| `/app/todos` | list with filters and search in the URL (query params), create, optimistic toggle, delete |
-| `/app/todos/:id` | path params, edit, typed 404 from the API |
-| any other path | the app's 404 page |
+| Export an OpenAPI spec from Rust without starting the server | `cargo run --bin openapi`, built from the same router the server runs |
+| Generate a TS client and react-query hooks, and fail CI when they drift | `bun run gen`, plus a contract diff in `bun run check` |
+| Build Rust in CI and Docker without a database | committed `.sqlx/` offline query metadata |
+| Return typed JSON for bad input and unknown routes, not plain text | `AppJson`, `AppPath`, `AppQuery` and JSON 404/405 |
+| Serve prerendered pages, a SPA and the API from one binary | Axum with a SPA fallback; deep links are tested |
+| Use the same commands on Windows and Linux | bun scripts, LF line endings, CI on both |
+| Tell an AI agent what "done" means and what not to touch | `AGENTS.md` and one check command |
+| Start everything with one command | `bun run dev`, or `docker compose up -d` |
 
-In production it is one process. Axum serves `/api/*` and the built pages. There is no Node at
-runtime.
+Each row costs a few hours of docs and trial and error the first time, and is easy to get subtly
+wrong: a client that CI never regenerates, a fallback that answers `/api/typo` with HTML. Here each
+one has a test.
 
-## Requirements
+**When not to use it.** You need per-request server rendering (`ssr: true`, not supported yet).
+Your backend is already TypeScript, so one language can share types without codegen (bhvr,
+Next.js). Or your team does not want Rust.
 
-- To run it with Docker only: Docker (Docker Desktop on Windows and macOS).
-- To develop: also Rust (stable), [bun](https://bun.sh), git, and
-  `cargo install sqlx-cli --no-default-features --features postgres,rustls`.
-
-## Try it with Docker
+## Quick start
 
 ```bash
 bun create rr-stack my-app
 cd my-app
-docker compose up -d
+docker compose up -d     # the whole app, no toolchain needed; the CLI prints the URL
+# or, to develop:
+bun run dev              # Postgres in Docker + Rust API + Vite, with hot reload
 ```
 
-The CLI prints the address (each project gets its own port). The first build compiles the Rust
-server in release mode, which takes a few minutes. `docker compose down` stops it; the database
-volume stays.
+A new project is a small working site about the stack: prerendered pages, an API reference built
+from the contract, and a playground with full CRUD, filters, search, optimistic updates and typed
+404/422 errors. Read its `README.md` and `AGENTS.md` for the day-to-day workflow.
 
-## Develop
+Requirements: Docker. To develop, also Rust (stable), [bun](https://bun.sh), git and
+`cargo install sqlx-cli --no-default-features --features postgres,rustls`.
 
-```bash
-cd my-app
-bun run dev
-```
+## This repository
 
-`bun run dev` starts only Postgres in Docker, then the Rust API on :3000 and the app on :5173 with
-`/api` proxied to the API. Edit a file and the page updates. Ctrl+C stops the API and the app; the
-database keeps running. The first run compiles the Rust server, which takes a minute.
+This repo is two things at once:
 
-## Commands
-
-| Command | Exit 0 means | Run it when |
-|---|---|---|
-| `bun run dev` | (keeps running) | you are working on the app |
-| `bun run check` | fmt, clippy, contract, typecheck, web build, `.sqlx`, tests all pass | before you call anything done |
-| `bun run smoke` | the real binary serves pages, deep links and the API over HTTP | you changed how files or routes are served |
-| `bun run gen` | `openapi.json` and `web/app/api/` regenerated | you changed a handler or a type that crosses the wire |
-| `cargo sqlx prepare -- --all-targets`, run in `server/` | `server/.sqlx/` matches the SQL | you added or changed a query |
-| `docker compose up -d` | the whole app runs in containers | you want to run it without a toolchain |
-
-`bun run check` needs the database (`bun run dev` or `docker compose up -d --wait db` starts it)
-and `sqlx-cli`. Without `DATABASE_URL` it fails on purpose. `SKIP_DB=1` runs the rest, and the
-output says that the result is not done.
-
-## Where things are
+- **The template.** Everything outside `cli/` and `docs/` is a working RR stack project. It is what
+  `bun create rr-stack` copies, so you can run, test and change it like any generated project.
+- **The CLI.** `cli/` is the `create-rr-stack` package on npm. At publish time it bundles the
+  template (only files git tracks) and the project README from `cli/project-readme.md`.
 
 ```
-server/src/lib.rs        api_router(): every route is registered here (spec + runtime)
-server/src/todos.rs      example domain: TodoTitle validates input at the boundary
-server/src/error.rs      ApiError: the JSON body of every 4xx/5xx, part of the contract
-server/migrations/       database schema (source of truth for tables)
-server/tests/            integration tests, each gets a fresh database (#[sqlx::test])
-web/app/routes.ts        page routes
-web/app/api/             GENERATED client, never edit by hand
-web/react-router.config.ts   prerender list: pages that search engines must see
-openapi.json             GENERATED contract, never edit by hand
-scripts/check.ts         definition of done (bun run check)
-Dockerfile, compose.yml  docker compose up -d runs everything
+server/                Rust API (Axum, utoipa, SQLx) and its integration tests
+web/                   React Router app; web/app/api/ is generated
+scripts/               bun scripts behind bun run dev / check / smoke / gen
+cli/                   create-rr-stack: index.ts (prompts), scaffold.ts (copy + rename), tests
+openapi.json           generated contract
+.github/workflows/     CI on Linux and Windows, plus docker compose; copied into new projects
 ```
 
-## How a change flows
+## Contributing
 
-1. Change the SQL in a migration, or add a query with `query!`.
-2. Change the Rust handler and its `ToSchema` types. Then register the route in `api_router()`.
-3. `bun run gen` regenerates the contract and the client.
-4. Use the generated `<operationId>Options()` or `<operationId>Mutation()` in a route.
-5. `bun run check`. If a layer disagrees with another, this is where it fails.
+Contributions are welcome, from people and from agents working for them. Start with
+[CONTRIBUTING.md](CONTRIBUTING.md). The short version:
 
-## SEO pages and the app
-
-Paths in `prerender` (`web/react-router.config.ts`) are rendered to HTML at build time, so search
-engines see their content. Every other route is a SPA behind the same server, and deep links work
-because Axum falls back to the SPA shell. Unknown `/api/*` paths return a JSON 404, never HTML.
-A prerendered page can use data that exists at build time (see `/api-reference`), but cannot call
-the API while building.
-
-## Production
-
-The `Dockerfile` builds one image with the server and the pages. Run it with `DATABASE_URL` set;
-it serves on port 3000 and runs migrations on startup. Without Docker: `bun run build` in `web/`,
-`cargo build --release` in `server/`, then run `server/target/release/server` (`server.exe` on
-Windows) with `WEB_DIST` pointing at `web/build/client`.
-
-## Not included yet
-
-Auth, file uploads, server-side rendering (`ssr: true`), deploy recipes.
+1. Open an issue first for anything bigger than a fix, so we agree on the shape.
+2. `bun run check` must exit 0. CI runs it on Linux and Windows.
+3. Changing the template? Also run `bun test` in `cli/`; it scaffolds a project and checks it.
+4. Keep the README translations in step with this file, or say in the PR which ones need an update.
 
 ## License
 
-MIT
+[MIT](LICENSE)
