@@ -301,3 +301,14 @@ describe("npm README", () => {
     expect(readme.match(/(\]\(|href=")(?!https?:|#)[^)"]+/g) ?? []).toEqual([]);
   });
 });
+
+describe("npm package", () => {
+  // npm ignores the global gitignore, so stray local state (e.g. an agent's .omc/) would ship.
+  test("ships only files tracked by git, plus what prepack generates", () => {
+    const pack = Bun.spawnSync(["npm", "pack", "--dry-run", "--ignore-scripts", "--json"], { cwd: import.meta.dir });
+    const files: string[] = Object.values(JSON.parse(pack.stdout.toString()) as Record<string, { files: { path: string }[] }>)[0]!.files.map((f) => f.path);
+    const tracked = new Set(Bun.spawnSync(["git", "ls-files"], { cwd: import.meta.dir }).stdout.toString().trim().split("\n"));
+    const generated = (f: string) => f.startsWith("template/") || ["package.json", "LICENSE", "README.md"].includes(f);
+    expect(files.filter((f) => !generated(f) && !tracked.has(f))).toEqual([]);
+  });
+});

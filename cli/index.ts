@@ -26,7 +26,8 @@ async function ask<T>(prompt: Promise<T | symbol>): Promise<T> {
   return answer;
 }
 
-p.intro(styleText(["bgCyan", "black"], ` create-rr-stack ${pkg.version} `));
+// One format per call: bun before 1.2 rejects an array here, and it must live long enough to say "upgrade".
+p.intro(styleText("bgCyan", styleText("black", ` create-rr-stack ${pkg.version} `)));
 
 const unknown = [...flags].filter((f) => !KNOWN.includes(f));
 if (unknown.length) bail(`Unknown option ${unknown.join(", ")}. Options: ${KNOWN.join(" ")}`);

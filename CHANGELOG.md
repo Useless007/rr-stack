@@ -3,6 +3,13 @@
 Versions are the `create-rr-stack` package on npm. A version changes what new projects start
 with; existing projects are not updated.
 
+## 0.5.1 (2026-11-22)
+
+- The CLI starts on bun 1.1 again, so it can tell you to run `bun upgrade`. Before, bun older
+  than 1.2 crashed on the first line with `The value "bgCyan,black" is invalid`.
+- The npm package no longer ships a stray local tool-state file (`astryx/files/web/app/.omc/`).
+  A test now fails if the package holds any file git does not track.
+
 ## 0.5.0 (2026-11-21)
 
 - New question in the CLI, "Which UI components?": Tailwind (default) or Tailwind + Astryx. With
