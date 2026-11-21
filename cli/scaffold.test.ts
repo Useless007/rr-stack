@@ -313,5 +313,5 @@ describe("npm package", () => {
     const tracked = new Set(Bun.spawnSync(["git", "ls-files"], { cwd: import.meta.dir }).stdout.toString().trim().split("\n"));
     const generated = (f: string) => f.startsWith("template/") || ["package.json", "LICENSE", "README.md"].includes(f);
     expect(files.filter((f) => !generated(f) && !tracked.has(f))).toEqual([]);
-  });
+  }, 30_000); // npm pack takes over 5 s on Windows CI
 });
