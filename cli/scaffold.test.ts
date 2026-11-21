@@ -137,29 +137,33 @@ describe("isOlder", () => {
 });
 
 describe("update notice", () => {
-  const runAgainst = (latest: string | null) => {
+  // Async spawn: spawnSync would block the event loop this fake registry answers on.
+  const runAgainst = async (latest: string | null) => {
     const server = Bun.serve({
       port: 0,
       fetch: () => (latest ? Response.json({ version: latest }) : new Response("down", { status: 503 })),
     });
     const cwd = mkdtempSync(join(tmpdir(), "rr-run-"));
-    const res = Bun.spawnSync([process.execPath, join(import.meta.dir, "index.ts"), "demo", "--no-install", "--no-git"], {
+    const proc = Bun.spawn([process.execPath, join(import.meta.dir, "index.ts"), "demo", "--no-install", "--no-git"], {
       cwd,
       env: { ...process.env, npm_config_registry: `http://localhost:${server.port}/` },
+      stdout: "pipe",
+      stderr: "pipe",
     });
+    const [code, out, err] = await Promise.all([proc.exited, new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
     server.stop(true);
-    return { code: res.exitCode, out: res.stdout.toString() + res.stderr.toString() };
+    return { code, out: out + err };
   };
 
-  test("says how to get a newer version when npm has one", () => {
-    const { code, out } = runAgainst("99.0.0");
+  test("says how to get a newer version when npm has one", async () => {
+    const { code, out } = await runAgainst("99.0.0");
     expect(code).toBe(0);
     expect(out).toContain("99.0.0");
     expect(out).toContain("bun create rr-stack@latest demo");
   });
 
-  test("stays quiet when the registry is unreachable", () => {
-    const { code, out } = runAgainst(null);
+  test("stays quiet when the registry is unreachable", async () => {
+    const { code, out } = await runAgainst(null);
     expect(code).toBe(0);
     expect(out).not.toContain("@latest");
   });
