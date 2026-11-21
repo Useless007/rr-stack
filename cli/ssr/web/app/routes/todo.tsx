@@ -11,8 +11,18 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     baseUrl: process.env.API_URL ?? `http://127.0.0.1:${process.env.PORT ?? "3000"}`,
     headers: { cookie: request.headers.get("cookie") ?? "" },
   });
-  // No response means the API could not be reached.
-  return data({ todo: res.data, error: res.error }, { status: res.response?.status ?? 502 });
+  if (res.data) return data({ todo: res.data, error: undefined });
+  // A typed ApiError keeps the API's status (404, 400). Anything else, such as the API being down,
+  // must not send its internal message or address to the browser.
+  const status = res.response && res.response.status >= 400 ? res.response.status : 502;
+  const apiError = res.error && typeof res.error === "object" && "error" in res.error ? res.error : undefined;
+  const error = apiError ?? { error: "unavailable", message: "The API did not answer." };
+  return data({ todo: undefined, error }, { status });
+}
+
+// The page is built with the visitor's cookie: a shared cache must never hand it to someone else.
+export function headers() {
+  return { "Cache-Control": "private, no-store" };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {

@@ -4,14 +4,21 @@ import { Link, useNavigate } from "react-router";
 import type { ApiError, Todo } from "~/api";
 import { deleteTodoMutation, getTodoOptions, updateTodoMutation } from "~/api/@tanstack/react-query.gen";
 import { useSession } from "~/components/session";
-import { errorMessage, formatDate } from "~/lib/errors";
+import { LocalDate } from "~/components/local-date";
+import { errorMessage } from "~/lib/errors";
 
 /** `initial` is what a server loader already fetched (--ssr apps); without it the page fetches in the browser. */
 export function TodoPage({ id, initial }: { id: number; initial?: { todo?: Todo; error?: ApiError } }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useSession();
-  const todo = useQuery({ ...getTodoOptions({ path: { id } }), retry: false, initialData: initial?.todo });
+  // Server data is fresh for a moment, so hydrating does not fetch the same todo again.
+  const todo = useQuery({
+    ...getTodoOptions({ path: { id } }),
+    retry: false,
+    initialData: initial?.todo,
+    staleTime: initial?.todo ? 10_000 : 0,
+  });
   const [draft, setDraft] = useState<string | null>(null);
   const save = useMutation({
     ...updateTodoMutation(),
@@ -87,7 +94,7 @@ export function TodoPage({ id, initial }: { id: number; initial?: { todo?: Todo;
         </dd>
         <dt className="muted">Created</dt>
         <dd>
-          <time dateTime={t.created_at}>{formatDate(t.created_at)}</time>
+          <LocalDate iso={t.created_at} />
         </dd>
         <dt className="muted">Fetched with</dt>
         <dd>

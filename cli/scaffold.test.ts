@@ -161,10 +161,16 @@ describe("isOlder", () => {
 
 describe("update notice", () => {
   // Async spawn: spawnSync would block the event loop this fake registry answers on.
-  const runAgainst = async (latest: string | null) => {
+  const runAgainst = async (latest: string | null | "hang") => {
     const server = Bun.serve({
       port: 0,
-      fetch: () => (latest ? Response.json({ version: latest }) : new Response("down", { status: 503 })),
+      idleTimeout: 0,
+      fetch: () =>
+        latest === "hang"
+          ? new Promise<Response>(() => {})
+          : latest
+            ? Response.json({ version: latest })
+            : new Response("down", { status: 503 }),
     });
     const cwd = mkdtempSync(join(tmpdir(), "rr-run-"));
     const proc = Bun.spawn([process.execPath, join(import.meta.dir, "index.ts"), "demo", "--no-install", "--no-git"], {
@@ -183,6 +189,20 @@ describe("update notice", () => {
     expect(code).toBe(0);
     expect(out).toContain("99.0.0");
     expect(out).toContain("bun create rr-stack@latest demo");
+  });
+
+
+  test("does not wait long for a registry that never answers", async () => {
+    const started = performance.now();
+    const { code, out } = await runAgainst("hang");
+    expect(code).toBe(0);
+    expect(out).not.toContain("@latest");
+    expect(performance.now() - started).toBeLessThan(6000);
+  }, 10_000);
+
+  test("keeps the flags the user typed in the suggested command", async () => {
+    const { out } = await runAgainst("99.0.0");
+    expect(out).toContain("bun create rr-stack@latest demo --no-install --no-git");
   });
 
   test("stays quiet when the registry is unreachable", async () => {

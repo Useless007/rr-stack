@@ -31,7 +31,7 @@ p.intro(styleText(["bgCyan", "black"], ` create-rr-stack ${pkg.version} `));
 const newest = await latestVersion();
 if (newest && isOlder(pkg.version, newest)) {
   p.log.warn(`create-rr-stack ${newest} is out; this is ${pkg.version}, an older copy from the cache.\n` +
-    `To start from the newest template, press Ctrl+C and run: ${cyan(`bun create rr-stack@latest ${args.find((a) => !a.startsWith("--")) ?? "my-app"}`)}`);
+    `To start from the newest template, press Ctrl+C and run: ${cyan(`bun create rr-stack@latest ${args.join(" ") || "my-app"}`)}`);
 }
 
 let name = args.find((a) => !a.startsWith("--")) ?? "";

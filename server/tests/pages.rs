@@ -113,3 +113,68 @@ async fn ssr_mode_without_a_renderer_is_a_502(db: PgPool) {
     );
     assert_eq!(get(app, at("/app")).await.0, StatusCode::BAD_GATEWAY);
 }
+
+/// A renderer that answers with the names of the headers it received.
+async fn header_renderer() -> String {
+    let echo = Router::new().fallback(|req: Request<Body>| async move {
+        let mut names: Vec<_> = req
+            .headers()
+            .keys()
+            .map(|k| k.as_str().to_owned())
+            .collect();
+        names.sort();
+        names.join(",")
+    });
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    tokio::spawn(axum::serve(listener, echo).into_future());
+    url
+}
+
+#[sqlx::test]
+async fn ssr_mode_drops_connection_headers_and_refuses_connect(db: PgPool) {
+    let pages = Pages::Ssr {
+        dist: dist("hop"),
+        upstream: header_renderer().await,
+    };
+    let app = app(AppState::new(db), Some(pages));
+
+    let req = Request::get("/app")
+        .header("connection", "keep-alive, x-secret")
+        .header("x-secret", "1")
+        .header("proxy-authorization", "Basic abc")
+        .header("upgrade", "websocket")
+        .header("cookie", "rr_session=abc")
+        .body(Body::empty())
+        .unwrap();
+    let (status, names) = get(app.clone(), req).await;
+    assert_eq!(status, StatusCode::OK);
+    for gone in ["x-secret", "proxy-authorization", "upgrade", "connection"] {
+        assert!(
+            !names.split(',').any(|n| n == gone),
+            "{gone} was forwarded: {names}"
+        );
+    }
+    assert!(names.split(',').any(|n| n == "cookie"), "{names}");
+
+    let connect = Request::builder()
+        .method("CONNECT")
+        .uri("/")
+        .body(Body::empty())
+        .unwrap();
+    assert_eq!(get(app, connect).await.0, StatusCode::METHOD_NOT_ALLOWED);
+}
+
+#[test]
+fn renderer_url_is_checked_at_startup() {
+    assert!(server::check_upstream("http://web:3001").is_ok());
+    assert!(server::check_upstream("http://127.0.0.1:3001/").is_ok());
+    for bad in [
+        "web:3001",
+        "https://web:3001",
+        "http://web:3001/render",
+        "not a url",
+    ] {
+        assert!(server::check_upstream(bad).is_err(), "{bad} was accepted");
+    }
+}

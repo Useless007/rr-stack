@@ -72,7 +72,7 @@ pub fn openapi() -> OpenApi {
     api_router().split_for_parts().1
 }
 
-pub use pages::Pages;
+pub use pages::{Pages, check_upstream};
 
 /// `pages` says how non-API paths are answered; `None` serves the API only (tests).
 pub fn app(state: AppState, pages: Option<Pages>) -> Router {

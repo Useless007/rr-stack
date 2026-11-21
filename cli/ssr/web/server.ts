@@ -9,6 +9,10 @@ const handle = createRequestHandler(build, "production");
 const server = Bun.serve({
   hostname: process.env.WEB_HOST ?? "127.0.0.1",
   port: Number(process.env.WEB_PORT ?? "3001"),
+  // Never Bun's error page with source and paths; React Router renders the app's own errors.
+  development: false,
+  // Bun's default is 10 s; a slow loader should finish, and the Rust side gives up at 30 s.
+  idleTimeout: 30,
   fetch: (request) => handle(request),
 });
 console.log(`rendering pages at ${server.url}`);

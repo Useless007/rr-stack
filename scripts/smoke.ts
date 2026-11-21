@@ -45,6 +45,11 @@ try {
     up = await fetch(`${base}/api/health`).then((r) => r.ok, () => false);
     if (!up) await Bun.sleep(100);
   }
+  // The renderer imports the whole server build, which can take longer than Rust's start.
+  for (let i = 0; i < 100 && up && env.WEB_SSR_URL; i++) {
+    if (await fetch(env.WEB_SSR_URL).then(() => true, () => false)) break;
+    await Bun.sleep(100);
+  }
   if (!up) {
     server.kill();
     fail(`server did not start:\n${await new Response(server.stderr).text()}`);

@@ -13,7 +13,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         PathBuf::from(std::env::var("WEB_DIST").unwrap_or_else(|_| "../web/build/client".into()));
     // Set when the app was created with --ssr: pages come from the React Router server.
     let pages = match std::env::var("WEB_SSR_URL") {
-        Ok(upstream) if !upstream.is_empty() => Pages::Ssr { dist, upstream },
+        Ok(upstream) if !upstream.is_empty() => {
+            server::check_upstream(&upstream)?;
+            Pages::Ssr { dist, upstream }
+        }
         _ => Pages::Spa(dist),
     };
 
