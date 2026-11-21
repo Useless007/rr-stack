@@ -5,3 +5,5 @@ build/
 .react-router/
 .superpowers/
 .omc/
+.vercel/
+.env*.local

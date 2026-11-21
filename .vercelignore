@@ -1,0 +1,7 @@
+# Not uploaded by `vercel deploy`: the Docker build makes its own.
+server/target/
+node_modules/
+web/node_modules/
+web/build/
+web/.react-router/
+web/e2e/results/

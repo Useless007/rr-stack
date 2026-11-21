@@ -161,7 +161,9 @@ component docs, and AGENTS.md says how to use it. Without the flag every page is
 On one server with Docker and a domain: put `SITE_URL`, `POSTGRES_PASSWORD` and
 `COMPOSE_FILE=compose.yml:compose.prod.yml` in `.env`, then `docker compose up -d --build`. Caddy
 serves it over HTTPS with a certificate it renews itself, and only ports 80 and 443 are open.
-[DEPLOY.md](DEPLOY.md) has the steps, updates, backups and what to check when it fails.
+[DEPLOY.md](DEPLOY.md) has the steps, updates, backups and what to check when it fails. It also
+covers Vercel with a Neon database, where every feature works the same. After either,
+`bun run e2e --url <address>` runs the browser tests against the live site.
 
 To run it another way:
 The `Dockerfile` builds one image with the server and the pages (with `--ssr`, also the renderer;

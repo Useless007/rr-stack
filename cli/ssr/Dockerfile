@@ -1,5 +1,6 @@
-# One image for both processes: the Rust server (default command) and the page renderer
-# (`bun /app/web/server.ts`). compose.yml runs one container of each.
+# One image for both processes, the Rust server and the page renderer. By default it runs both
+# (web/start.ts), which is what one-container hosts such as Vercel need. compose.yml runs one
+# container of each instead: `/app/server` and `bun /app/web/server.ts`.
 FROM oven/bun:1 AS web
 WORKDIR /src
 COPY openapi.json ./
@@ -22,9 +23,9 @@ FROM oven/bun:1-slim
 COPY --from=server /src/server/target/release/server /app/server
 COPY --from=web /src/web/build /app/web/build
 COPY --from=web /src/web/node_modules /app/web/node_modules
-COPY --from=web /src/web/package.json /src/web/server.ts /app/web/
+COPY --from=web /src/web/package.json /src/web/server.ts /src/web/start.ts /app/web/
 ENV WEB_DIST=/app/web/build/client PORT=3000
 EXPOSE 3000
 USER bun
-# Migrations are compiled into the binary and run on startup.
-CMD ["/app/server"]
+# Migrations are compiled into the server and run on startup.
+CMD ["bun", "/app/web/start.ts"]

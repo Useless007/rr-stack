@@ -10,7 +10,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt().with_env_filter(filter).init();
     // `cargo run` from server/ picks up the repo-root .env; real env vars still win.
     dotenvy::from_filename("../.env").ok();
-    let database_url = std::env::var("DATABASE_URL").map_err(|_| "DATABASE_URL is not set")?;
+    // Neon (and Vercel's Postgres integrations) set DATABASE_URL to a connection pooler, which
+    // drops LISTEN (realtime events) and the session lock migrations take. Use the direct one.
+    let database_url = std::env::var("DATABASE_URL_UNPOOLED")
+        .or_else(|_| std::env::var("DATABASE_URL"))
+        .map_err(|_| "DATABASE_URL is not set")?;
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".into());
     // An empty WEB_DIST serves the API only (`bun run dev`, where Vite serves the pages).
     let dist = std::env::var("WEB_DIST").unwrap_or_else(|_| "../web/build/client".into());

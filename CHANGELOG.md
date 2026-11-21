@@ -3,6 +3,25 @@
 Versions are the `create-rr-stack` package on npm. A version changes what new projects start
 with; existing projects are not updated.
 
+## 0.7.0 (2026-11-22)
+
+- Deploy to Vercel as well as to your own server, with the same features. The app's Docker image
+  runs on Vercel's Container Runtime with a Neon database; `DEPLOY.md` has the commands. Proven by
+  running the whole browser test suite against Vercel production, for a default app and an `--ssr`
+  app.
+- Realtime updates go through Postgres `LISTEN/NOTIFY`, and the sign-in limit is counted in a
+  `rate_limits` table (migration `0003`). Several server processes on one database now act as one:
+  a change made through one reaches pages connected to another, and a client cannot get more
+  sign-in attempts by landing on a different one. If the listener loses its connection, open pages
+  reconnect and refetch.
+- The server prefers `DATABASE_URL_UNPOOLED` when it is set, because a connection pooler drops
+  `LISTEN` and the lock migrations take. `SIGN_IN_LIMIT` sets the attempts per minute (default 10).
+- `--ssr` images run the server and the renderer together by default (`web/start.ts`), for hosts
+  that run one container. `compose.yml` still runs them as two.
+- `SITE_URL` can also come from a committed `web/.env.production`, for hosts that pass no variables
+  to a build.
+- `bun run e2e --url <address>` runs the browser tests against a deployment.
+
 ## 0.6.0 (2026-11-22)
 
 - Search engines and share cards. Public pages are listed once, in `web/app/seo.ts`: each is

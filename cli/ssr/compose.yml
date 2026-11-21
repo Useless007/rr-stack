@@ -23,6 +23,7 @@ services:
       context: .
       args:
         SITE_URL: ${SITE_URL:-http://localhost:8000}
+    command: ["/app/server"]
     environment:
       DATABASE_URL: postgres://rr:${POSTGRES_PASSWORD:-rr}@db:5432/rr
       WEB_SSR_URL: http://web:3001
