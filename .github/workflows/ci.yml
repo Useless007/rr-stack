@@ -10,8 +10,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    env:
-      DATABASE_URL: postgres://rr:rr@localhost:5432/rr
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -23,9 +21,9 @@ jobs:
           workspaces: server
           cache-all-crates: true
 
-      - name: Postgres (Linux, Docker)
+      - name: Postgres (Linux, the project's own compose file)
         if: runner.os == 'Linux'
-        run: docker compose up -d --wait
+        run: cp .env.example .env && docker compose up -d --wait db
       - name: Postgres (Windows, preinstalled on the runner)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -34,24 +32,44 @@ jobs:
         run: |
           $svc = Get-Service -Name "postgresql*"
           Set-Service -InputObject $svc -Status running -StartupType automatic
-          & "$env:PGBIN\psql" -U postgres -c "CREATE ROLE rr LOGIN SUPERUSER PASSWORD 'rr';"
-          & "$env:PGBIN\psql" -U postgres -c "CREATE DATABASE rr OWNER rr;"
+          & "$env:PGBIN\pg_isready" -t 30
+          & "$env:PGBIN\psql" -U postgres -c "CREATE ROLE app LOGIN SUPERUSER PASSWORD 'app';"
+          & "$env:PGBIN\psql" -U postgres -c "CREATE DATABASE app OWNER app;"
+          "DATABASE_URL=postgres://app:app@localhost:5432/app" >> $env:GITHUB_ENV
 
       - run: cargo install sqlx-cli --locked --no-default-features --features postgres,rustls
       - run: bun install --frozen-lockfile
         working-directory: web
-      - run: bun install --frozen-lockfile
-        working-directory: cli
       - name: build with no database (offline .sqlx/)
         shell: bash
         run: env -u DATABASE_URL SQLX_OFFLINE=true cargo build --all-targets
         working-directory: server
+
+      # Only in the rr-stack template repo, which also holds the create-rr-stack CLI.
+      - if: hashFiles('cli/package.json') != ''
+        run: bun install --frozen-lockfile
+        working-directory: cli
+
       - run: bun run check
       - run: bun run smoke
-      - name: scaffold a project with the CLI and build it
+
+      - name: scaffold a project with the CLI and check it
+        if: hashFiles('cli/package.json') != ''
         shell: bash
         run: |
           cd "$RUNNER_TEMP"
           bun "$GITHUB_WORKSPACE/cli/index.ts" ci-demo --yes --no-git
           cd ci-demo
           SKIP_DB=1 bun run check
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker compose up -d serves the whole app
+        run: |
+          docker compose up -d --build --wait
+          url="http://$(docker compose port app 3000)"
+          curl -fsS "$url/api/health"
+          curl -fsS "$url/" | grep -q "typed from the database to the screen"
+          curl -fsS -X POST -H 'content-type: application/json' -d '{"title":"from docker"}' "$url/api/todos"

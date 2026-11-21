@@ -19,6 +19,11 @@ export function dbPort(name: string): number {
   return 54000 + (hash % 1000);
 }
 
+/** Host port for `docker compose up`: next to the database port, so the pair is easy to spot. */
+export function appPort(name: string): number {
+  return dbPort(name) + 1000;
+}
+
 // Tracked in the template repo but not part of a new project.
 const SKIP_TOP = new Set(["cli", "docs"]);
 // npm never ships files named .gitignore, so the template stores them under this name.
@@ -67,13 +72,19 @@ export async function scaffold(opts: { name: string; dest: string; source: strin
 
   const db = name.replaceAll("-", "_");
   const port = dbPort(name);
+  const app = appPort(name);
+  const composeSwaps: [string, string][] = [
+    ["POSTGRES_USER: rr", `POSTGRES_USER: ${db}`],
+    ["POSTGRES_PASSWORD: rr", `POSTGRES_PASSWORD: ${db}`],
+    ["POSTGRES_DB: rr", `POSTGRES_DB: ${db}`],
+    ["pg_isready -U rr", `pg_isready -U ${db}`],
+    ["127.0.0.1:5432:5432", `127.0.0.1:${port}:5432`],
+    ["postgres://rr:rr@db:5432/rr", `postgres://${db}:${db}@db:5432/${db}`],
+    ["127.0.0.1:8000:3000", `127.0.0.1:${app}:3000`],
+    ["http://localhost:8000", `http://localhost:${app}`],
+  ];
   await edit(join(dest, "compose.yml"), (s) =>
-    must(s, ["POSTGRES_USER: rr", "POSTGRES_PASSWORD: rr", "POSTGRES_DB: rr", "pg_isready -U rr", "127.0.0.1:5432:5432"])
-      .replace("POSTGRES_USER: rr", `POSTGRES_USER: ${db}`)
-      .replace("POSTGRES_PASSWORD: rr", `POSTGRES_PASSWORD: ${db}`)
-      .replace("POSTGRES_DB: rr", `POSTGRES_DB: ${db}`)
-      .replace("pg_isready -U rr", `pg_isready -U ${db}`)
-      .replace("127.0.0.1:5432:5432", `127.0.0.1:${port}:5432`),
+    composeSwaps.reduce((text, [from, to]) => text.replace(from, to), must(s, composeSwaps.map(([from]) => from))),
   );
   const dbUrl = "postgres://rr:rr@localhost:5432/rr";
   await edit(join(dest, ".env.example"), (s) =>

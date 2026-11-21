@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"total!\",\n                  count(*) FILTER (WHERE NOT done) AS \"open!\",\n                  count(*) FILTER (WHERE done) AS \"done!\"\n           FROM todos",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "open!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "done!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "23bc5406de2622874d1d3f1ad0671839761c1d5646d5d4b9d0ac8a25c9efe5b2"
+}

@@ -14,7 +14,7 @@ They are generated. `bun run check` fails if they differ from a fresh generation
 
 - `openapi.json` — from the Rust handlers (`cargo run --bin openapi`)
 - `web/app/api/**` — from `openapi.json` (`bun run gen` regenerates both)
-- `server/.sqlx/**` — from the SQL in `query!` macros (`cd server && cargo sqlx prepare -- --all-targets`)
+- `server/.sqlx/**` — from the SQL in `query!` macros (`cargo sqlx prepare -- --all-targets`, run in `server/`)
 
 ## Where each type comes from
 
@@ -36,7 +36,9 @@ They are generated. `bun run check` fails if they differ from a fresh generation
 
 - Validate at the boundary with a newtype (see `TodoTitle`): parse once, trust the type inside.
   `#[schema(max_length = ...)]` only documents; it does not enforce.
-- No `unwrap`/`expect` outside tests (clippy denies it). Return `AppError`.
+- No `unwrap`/`expect` outside tests (clippy denies it). Return `AppError`; it becomes a JSON
+  `ApiError` that the generated client types. Use `AppJson`, `AppPath`, `AppQuery` (not axum's
+  extractors) so bad input is a typed 400/422 instead of plain text.
 - Keep Rust plain: no custom macros, no generic abstraction layers. A human must be able to
   debug it when you get stuck.
 - New public page that search engines must see? Add its path to `prerender` in

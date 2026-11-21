@@ -3,8 +3,8 @@
 import { type DefaultError, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { createTodo, health, listTodos, type Options } from '../sdk.gen';
-import type { CreateTodoData, CreateTodoResponse, HealthData, HealthResponse, ListTodosData, ListTodosResponse } from '../types.gen';
+import { createTodo, deleteTodo, getStats, getTodo, health, listTodos, type Options, updateTodo } from '../sdk.gen';
+import type { CreateTodoData, CreateTodoError, CreateTodoResponse, DeleteTodoData, DeleteTodoError, DeleteTodoResponse, GetStatsData, GetStatsResponse, GetTodoData, GetTodoError, GetTodoResponse, HealthData, HealthResponse, ListTodosData, ListTodosError, ListTodosResponse, UpdateTodoData, UpdateTodoError, UpdateTodoResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -54,9 +54,24 @@ export const healthOptions = (options?: Options<HealthData>) => queryOptions<Hea
     queryKey: healthQueryKey(options)
 });
 
+export const getStatsQueryKey = (options?: Options<GetStatsData>) => createQueryKey('getStats', options);
+
+export const getStatsOptions = (options?: Options<GetStatsData>) => queryOptions<GetStatsResponse, DefaultError, GetStatsResponse, ReturnType<typeof getStatsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getStats({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getStatsQueryKey(options)
+});
+
 export const listTodosQueryKey = (options?: Options<ListTodosData>) => createQueryKey('listTodos', options);
 
-export const listTodosOptions = (options?: Options<ListTodosData>) => queryOptions<ListTodosResponse, DefaultError, ListTodosResponse, ReturnType<typeof listTodosQueryKey>>({
+export const listTodosOptions = (options?: Options<ListTodosData>) => queryOptions<ListTodosResponse, ListTodosError, ListTodosResponse, ReturnType<typeof listTodosQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
         const { data } = await listTodos({
             ...options,
@@ -69,10 +84,53 @@ export const listTodosOptions = (options?: Options<ListTodosData>) => queryOptio
     queryKey: listTodosQueryKey(options)
 });
 
-export const createTodoMutation = (options?: Partial<Options<CreateTodoData>>): UseMutationOptions<CreateTodoResponse, DefaultError, Options<CreateTodoData>> => {
-    const mutationOptions: UseMutationOptions<CreateTodoResponse, DefaultError, Options<CreateTodoData>> = {
+export const createTodoMutation = (options?: Partial<Options<CreateTodoData>>): UseMutationOptions<CreateTodoResponse, CreateTodoError, Options<CreateTodoData>> => {
+    const mutationOptions: UseMutationOptions<CreateTodoResponse, CreateTodoError, Options<CreateTodoData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await createTodo({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const deleteTodoMutation = (options?: Partial<Options<DeleteTodoData>>): UseMutationOptions<DeleteTodoResponse, DeleteTodoError, Options<DeleteTodoData>> => {
+    const mutationOptions: UseMutationOptions<DeleteTodoResponse, DeleteTodoError, Options<DeleteTodoData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await deleteTodo({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getTodoQueryKey = (options: Options<GetTodoData>) => createQueryKey('getTodo', options);
+
+export const getTodoOptions = (options: Options<GetTodoData>) => queryOptions<GetTodoResponse, GetTodoError, GetTodoResponse, ReturnType<typeof getTodoQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getTodo({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getTodoQueryKey(options)
+});
+
+export const updateTodoMutation = (options?: Partial<Options<UpdateTodoData>>): UseMutationOptions<UpdateTodoResponse, UpdateTodoError, Options<UpdateTodoData>> => {
+    const mutationOptions: UseMutationOptions<UpdateTodoResponse, UpdateTodoError, Options<UpdateTodoData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await updateTodo({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

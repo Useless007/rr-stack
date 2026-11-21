@@ -8,6 +8,10 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   server: {
-    proxy: { "/api": "http://localhost:3000" },
+    // Regex, not "/api": a plain prefix would also proxy /api-reference.
+    proxy: { "^/api(/|$)": "http://localhost:3000" },
+    strictPort: true,
+    // api-reference imports ../openapi.json at build time.
+    fs: { allow: [".."] },
   },
 });

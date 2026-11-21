@@ -22,37 +22,53 @@ Works the same on Windows, macOS and Linux: every project command is a bun scrip
 | Database | Postgres + SQLx `query!` | SQL against the real schema, at compile time |
 | API | Axum + utoipa | `openapi.json` is derived from the Rust handlers |
 | Contract | `openapi.json` | regenerated and diffed on every check |
-| Client | hey-api + TanStack Query | TS client and hooks generated from the contract |
+| Client | hey-api + TanStack Query | TS client, hooks and typed errors generated from the contract |
 | UI | React Router (`ssr: false` + `prerender`) | `tsc --noEmit` and a full build |
+
+A new project is a small working site about the stack itself, with one example of each thing you
+will need:
+
+| Page | Shows |
+|---|---|
+| `/` | a prerendered landing page with a live API status |
+| `/how-it-works` | prerendered; the layers and how a change travels through them |
+| `/api-reference` | prerendered from `openapi.json` at build time, no API call |
+| `/app` | dashboard: an aggregate SQL query (`GET /api/stats`) |
+| `/app/todos` | list with filters and search in the URL (query params), create, optimistic toggle, delete |
+| `/app/todos/:id` | path params, edit, typed 404 from the API |
+| any other path | the app's 404 page |
 
 In production it is one process. Axum serves `/api/*` and the built pages. There is no Node at
 runtime.
 
 ## Requirements
 
-- Rust (stable), [bun](https://bun.sh), Docker (Docker Desktop on Windows and macOS), git
-- `cargo install sqlx-cli --no-default-features --features postgres,rustls`
+- To run it with Docker only: Docker (Docker Desktop on Windows and macOS).
+- To develop: also Rust (stable), [bun](https://bun.sh), git, and
+  `cargo install sqlx-cli --no-default-features --features postgres,rustls`.
 
-## Create a project
+## Try it with Docker
 
 ```bash
-bun create rr-stack my-app        # asks a few questions; --yes, --no-install, --no-git skip them
+bun create rr-stack my-app
+cd my-app
+docker compose up -d
+```
+
+The CLI prints the address (each project gets its own port). The first build compiles the Rust
+server in release mode, which takes a few minutes. `docker compose down` stops it; the database
+volume stays.
+
+## Develop
+
+```bash
 cd my-app
 bun run dev
 ```
 
-Open http://localhost:5173. The first run compiles the Rust server, which takes a minute.
-
-The CLI copies the template and renames the packages to `my-app-server` and `my-app-web`. Each
-project gets its own Postgres database name and host port (54000-54999), so two projects can run at
-the same time. It also writes `.env`, runs `bun install` and runs `git init`.
-
-## Run it
-
-`bun run dev` starts Postgres in Docker, the Rust API on :3000 and the app on :5173 (with `/api`
-proxied to the API). Ctrl+C stops the API and the app; the database keeps running.
-
-Open http://localhost:5173 (a prerendered page) and http://localhost:5173/app/todos (the SPA).
+`bun run dev` starts only Postgres in Docker, then the Rust API on :3000 and the app on :5173 with
+`/api` proxied to the API. Edit a file and the page updates. Ctrl+C stops the API and the app; the
+database keeps running. The first run compiles the Rust server, which takes a minute.
 
 ## Commands
 
@@ -62,17 +78,19 @@ Open http://localhost:5173 (a prerendered page) and http://localhost:5173/app/to
 | `bun run check` | fmt, clippy, contract, typecheck, web build, `.sqlx`, tests all pass | before you call anything done |
 | `bun run smoke` | the real binary serves pages, deep links and the API over HTTP | you changed how files or routes are served |
 | `bun run gen` | `openapi.json` and `web/app/api/` regenerated | you changed a handler or a type that crosses the wire |
-| `cd server && cargo sqlx prepare -- --all-targets` | `server/.sqlx/` matches the SQL | you added or changed a query |
+| `cargo sqlx prepare -- --all-targets`, run in `server/` | `server/.sqlx/` matches the SQL | you added or changed a query |
+| `docker compose up -d` | the whole app runs in containers | you want to run it without a toolchain |
 
-`bun run check` needs the database (`bun run dev` or `docker compose up -d --wait` starts it) and
-`sqlx-cli`. Without `DATABASE_URL` it fails on purpose. `SKIP_DB=1` runs the rest, and the output
-says that the result is not done.
+`bun run check` needs the database (`bun run dev` or `docker compose up -d --wait db` starts it)
+and `sqlx-cli`. Without `DATABASE_URL` it fails on purpose. `SKIP_DB=1` runs the rest, and the
+output says that the result is not done.
 
 ## Where things are
 
 ```
 server/src/lib.rs        api_router(): every route is registered here (spec + runtime)
 server/src/todos.rs      example domain: TodoTitle validates input at the boundary
+server/src/error.rs      ApiError: the JSON body of every 4xx/5xx, part of the contract
 server/migrations/       database schema (source of truth for tables)
 server/tests/            integration tests, each gets a fresh database (#[sqlx::test])
 web/app/routes.ts        page routes
@@ -80,6 +98,7 @@ web/app/api/             GENERATED client, never edit by hand
 web/react-router.config.ts   prerender list: pages that search engines must see
 openapi.json             GENERATED contract, never edit by hand
 scripts/check.ts         definition of done (bun run check)
+Dockerfile, compose.yml  docker compose up -d runs everything
 ```
 
 ## How a change flows
@@ -95,19 +114,19 @@ scripts/check.ts         definition of done (bun run check)
 Paths in `prerender` (`web/react-router.config.ts`) are rendered to HTML at build time, so search
 engines see their content. Every other route is a SPA behind the same server, and deep links work
 because Axum falls back to the SPA shell. Unknown `/api/*` paths return a JSON 404, never HTML.
-In this version, prerendered pages cannot fetch from the API at build time.
+A prerendered page can use data that exists at build time (see `/api-reference`), but cannot call
+the API while building.
 
 ## Production
 
-Build the pages with `bun run build` in `web/` and the server with `cargo build --release` in
-`server/`. Then run `server/target/release/server` (`server.exe` on Windows) with `WEB_DIST`
-pointing at `web/build/client` and `DATABASE_URL` at your database.
-
-The server runs migrations on startup.
+The `Dockerfile` builds one image with the server and the pages. Run it with `DATABASE_URL` set;
+it serves on port 3000 and runs migrations on startup. Without Docker: `bun run build` in `web/`,
+`cargo build --release` in `server/`, then run `server/target/release/server` (`server.exe` on
+Windows) with `WEB_DIST` pointing at `web/build/client`.
 
 ## Not included yet
 
-Auth, server-side rendering (`ssr: true`), structured JSON error bodies, deploy recipes.
+Auth, file uploads, server-side rendering (`ssr: true`), deploy recipes.
 
 ## License
 

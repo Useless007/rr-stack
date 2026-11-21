@@ -1,27 +1,28 @@
 @import "tailwindcss";
 @import "@fontsource-variable/ibm-plex-sans";
+@import "@fontsource/ibm-plex-sans-thai/400.css";
+@import "@fontsource/ibm-plex-sans-thai/600.css";
 @import "@fontsource/ibm-plex-mono/400.css";
 @import "@fontsource/ibm-plex-mono/500.css";
 
 @theme {
-  --font-sans: "IBM Plex Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans Variable", "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
   /* Ink and patina: the green of oxidised copper, the rust that is not orange. */
   --color-ink: #0e1a2b;
   --color-ink-soft: #1b2a40;
   --color-paper: #eef2f6;
-  --color-mist: #8a9bb0;
   --color-patina: #3fb6a8;
-  --color-patina-deep: #1d7f74;
+  --color-patina-deep: #17695f;
   --color-signal: #f2b33d;
   --color-fault: #e5636b;
+  --color-fault-deep: #b3333c;
 }
 
 html,
 body {
   @apply bg-paper text-ink dark:bg-ink dark:text-paper;
-  font-feature-settings: "ss02";
 }
 
 @media (prefers-color-scheme: dark) {
@@ -31,7 +32,25 @@ body {
 }
 
 :focus-visible {
-  @apply outline-2 outline-offset-2 outline-patina;
+  @apply outline-2 outline-offset-2 outline-patina-deep dark:outline-patina;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md bg-ink px-4 py-2 text-sm font-medium text-paper hover:bg-ink-soft disabled:opacity-60 dark:bg-paper dark:text-ink dark:hover:bg-white;
+  }
+  .btn-quiet {
+    @apply inline-flex items-center justify-center rounded-md border border-ink/20 px-3 py-1.5 text-sm hover:bg-ink/5 dark:border-paper/25 dark:hover:bg-paper/10;
+  }
+  .muted {
+    @apply text-ink/70 dark:text-paper/70;
+  }
+  .path {
+    @apply font-mono text-sm text-patina-deep [overflow-wrap:anywhere] dark:text-patina;
+  }
+  .field {
+    @apply min-w-0 rounded-md border border-ink/25 bg-white px-3 py-2 focus:border-patina-deep dark:border-paper/25 dark:bg-ink-soft dark:focus:border-patina;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

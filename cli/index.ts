@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 import * as p from "@clack/prompts";
-import { existsSync, mkdtempSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { styleText } from "node:util";
-import { buildTemplate, scaffold, validateName } from "./scaffold";
+import { appPort, buildTemplate, scaffold, validateName } from "./scaffold";
 
 const args = process.argv.slice(2);
 const flags = new Set(args.filter((a) => a.startsWith("--")));
@@ -40,7 +40,14 @@ const install = flags.has("--no-install") ? false : interactive ? await ask(p.co
 const git = flags.has("--no-git") ? false : interactive ? await ask(p.confirm({ message: "Initialize a git repository?" })) : true;
 
 const dest = resolve(process.cwd(), name);
-const spin = p.spinner();
+let created = false;
+// Ctrl+C while a spinner runs: stop, and remove a half-copied project.
+const spin = p.spinner({
+  onCancel: () => {
+    if (!created) rmSync(dest, { recursive: true, force: true });
+    process.exit(130);
+  },
+});
 spin.start("Copying the template");
 try {
   // The npm package ships template/ (built by prepack); a git checkout builds it on the fly.
@@ -54,14 +61,23 @@ try {
   spin.error("Could not create the project");
   bail((err as Error).message);
 }
+created = true;
 spin.stop(`Created ${bold(name)}`);
 
 const run = async (label: string, cmd: string[], cwd: string) => {
   spin.start(label);
-  const proc = Bun.spawn(cmd, { cwd, stdout: "pipe", stderr: "pipe" });
-  if ((await proc.exited) !== 0) {
+  let output = "";
+  let ok = false;
+  try {
+    const proc = Bun.spawn(cmd, { cwd, stdout: "pipe", stderr: "pipe" });
+    ok = (await proc.exited) === 0;
+    output = await new Response(proc.stderr).text();
+  } catch (err) {
+    output = `${cmd[0]} could not be started: ${(err as Error).message}`;
+  }
+  if (!ok) {
     spin.error(`${label} failed`);
-    p.log.message(dim(await new Response(proc.stderr).text()));
+    p.log.message(dim(output));
     p.log.warn(`The project is created. Run \`${cmd.join(" ")}\` in ${cwd} yourself.`);
     return;
   }
@@ -78,6 +94,9 @@ p.note(
     "",
     `${cyan("bun run check")}    ${dim("is it done? exit 0 means every layer agrees")}`,
     `${cyan("bun run gen")}      ${dim("regenerate the contract and client after an API change")}`,
+    "",
+    `${dim("No Rust or bun on this machine? Docker runs the whole app:")}`,
+    `${cyan("docker compose up -d")}  ${dim(`then open http://localhost:${appPort(name)}`)}`,
   ].join("\n"),
   "Next steps",
 );

@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateTodoData, CreateTodoErrors, CreateTodoResponses, HealthData, HealthResponses, ListTodosData, ListTodosResponses } from './types.gen';
+import type { CreateTodoData, CreateTodoErrors, CreateTodoResponses, DeleteTodoData, DeleteTodoErrors, DeleteTodoResponses, GetStatsData, GetStatsResponses, GetTodoData, GetTodoErrors, GetTodoResponses, HealthData, HealthResponses, ListTodosData, ListTodosErrors, ListTodosResponses, UpdateTodoData, UpdateTodoErrors, UpdateTodoResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -20,10 +20,25 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 
 export const health = <ThrowOnError extends boolean = false>(options?: Options<HealthData, ThrowOnError>): RequestResult<HealthResponses, unknown, ThrowOnError> => (options?.client ?? client).get<HealthResponses, unknown, ThrowOnError>({ url: '/api/health', ...options });
 
-export const listTodos = <ThrowOnError extends boolean = false>(options?: Options<ListTodosData, ThrowOnError>): RequestResult<ListTodosResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListTodosResponses, unknown, ThrowOnError>({ url: '/api/todos', ...options });
+export const getStats = <ThrowOnError extends boolean = false>(options?: Options<GetStatsData, ThrowOnError>): RequestResult<GetStatsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetStatsResponses, unknown, ThrowOnError>({ url: '/api/stats', ...options });
+
+export const listTodos = <ThrowOnError extends boolean = false>(options?: Options<ListTodosData, ThrowOnError>): RequestResult<ListTodosResponses, ListTodosErrors, ThrowOnError> => (options?.client ?? client).get<ListTodosResponses, ListTodosErrors, ThrowOnError>({ url: '/api/todos', ...options });
 
 export const createTodo = <ThrowOnError extends boolean = false>(options: Options<CreateTodoData, ThrowOnError>): RequestResult<CreateTodoResponses, CreateTodoErrors, ThrowOnError> => (options.client ?? client).post<CreateTodoResponses, CreateTodoErrors, ThrowOnError>({
     url: '/api/todos',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const deleteTodo = <ThrowOnError extends boolean = false>(options: Options<DeleteTodoData, ThrowOnError>): RequestResult<DeleteTodoResponses, DeleteTodoErrors, ThrowOnError> => (options.client ?? client).delete<DeleteTodoResponses, DeleteTodoErrors, ThrowOnError>({ url: '/api/todos/{id}', ...options });
+
+export const getTodo = <ThrowOnError extends boolean = false>(options: Options<GetTodoData, ThrowOnError>): RequestResult<GetTodoResponses, GetTodoErrors, ThrowOnError> => (options.client ?? client).get<GetTodoResponses, GetTodoErrors, ThrowOnError>({ url: '/api/todos/{id}', ...options });
+
+export const updateTodo = <ThrowOnError extends boolean = false>(options: Options<UpdateTodoData, ThrowOnError>): RequestResult<UpdateTodoResponses, UpdateTodoErrors, ThrowOnError> => (options.client ?? client).patch<UpdateTodoResponses, UpdateTodoErrors, ThrowOnError>({
+    url: '/api/todos/{id}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
