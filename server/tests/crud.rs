@@ -178,3 +178,10 @@ async fn stats_count_open_and_done(db: PgPool) {
     let (_, stats) = call(&db, Method::GET, "/api/stats", None).await;
     assert_eq!(stats, json!({ "total": 2, "open": 1, "done": 1 }));
 }
+
+#[sqlx::test]
+async fn wrong_method_is_json_405(db: PgPool) {
+    let (status, err) = call(&db, Method::PUT, "/api/todos", None).await;
+    assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
+    assert_eq!(err["error"], "method_not_allowed");
+}

@@ -15,6 +15,8 @@ export default function TodoDetail() {
     ...updateTodoMutation(),
     onSuccess: () => (setDraft(null), queryClient.invalidateQueries()),
   });
+  // Separate from `save`, so ticking the box does not throw away a title being edited.
+  const toggle = useMutation({ ...updateTodoMutation(), onSuccess: () => queryClient.invalidateQueries() });
   const remove = useMutation({
     ...deleteTodoMutation(),
     onSuccess: () => queryClient.invalidateQueries().then(() => navigate("/app/todos")),
@@ -73,7 +75,7 @@ export default function TodoDetail() {
               type="checkbox"
               className="size-4 accent-patina-deep dark:accent-patina"
               checked={t.done}
-              onChange={() => save.mutate({ path: { id }, body: { done: !t.done } })}
+              onChange={() => toggle.mutate({ path: { id }, body: { done: !t.done } })}
             />
             {t.done ? "Done" : "Open"}
           </label>
@@ -96,6 +98,14 @@ export default function TodoDetail() {
       >
         Delete this todo
       </button>
+      {[toggle.error, remove.error].map(
+        (error, i) =>
+          error && (
+            <p key={i} className="mt-2 text-sm text-fault-deep dark:text-fault" role="alert">
+              {errorMessage(error)}
+            </p>
+          ),
+      )}
     </div>
   );
 }

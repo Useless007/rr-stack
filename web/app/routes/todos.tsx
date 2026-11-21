@@ -47,6 +47,12 @@ export default function Todos() {
   });
 
   const [search, setSearch] = useState(q);
+  // Follow the URL when it changes from outside (tab link, Back), so the box never writes a stale q back.
+  const [seenQ, setSeenQ] = useState(q);
+  if (q !== seenQ) {
+    setSeenQ(q);
+    setSearch(q);
+  }
   useEffect(() => {
     const id = setTimeout(() => {
       if (search === q) return;
@@ -78,10 +84,17 @@ export default function Todos() {
           {create.isPending ? "Adding" : "Add todo"}
         </button>
       </form>
-      {create.error && (
-        <p className="mt-2 text-sm text-fault-deep dark:text-fault" role="alert">
-          Not added: {errorMessage(create.error)}
-        </p>
+      {[
+        { error: create.error, what: "Not added" },
+        { error: toggle.error, what: "Not updated" },
+        { error: remove.error, what: "Not deleted" },
+      ].map(
+        ({ error, what }) =>
+          error && (
+            <p key={what} className="mt-2 text-sm text-fault-deep dark:text-fault" role="alert">
+              {what}: {errorMessage(error)}
+            </p>
+          ),
       )}
 
       <div className="mt-8 flex flex-wrap items-center justify-between gap-3">

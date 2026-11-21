@@ -129,4 +129,13 @@ describe("create-rr-stack (non-interactive)", () => {
     expect(res.exitCode).toBe(1);
     expect(existsSync(join(cwd, "Bad_Name"))).toBeFalse();
   });
+
+  test("never deletes a folder that was already there", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "rr-run-"));
+    mkdirSync(join(cwd, "mine"));
+    writeFileSync(join(cwd, "mine", "keep.txt"), "mine");
+    const res = Bun.spawnSync([process.execPath, join(import.meta.dir, "index.ts"), "mine", "--yes"], { cwd });
+    expect(res.exitCode).toBe(1);
+    expect(readFileSync(join(cwd, "mine", "keep.txt"), "utf8")).toBe("mine");
+  });
 });

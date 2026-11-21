@@ -44,6 +44,7 @@ pub fn app(state: AppState, web_dist: Option<PathBuf>) -> Router {
         .route("/api", any(json_404))
         .route("/api/", any(json_404))
         .route("/api/{*rest}", any(json_404))
+        .method_not_allowed_fallback(|| async { AppError::MethodNotAllowed })
         .with_state(state);
     match web_dist {
         // Prerendered pages are real files; any other path gets the SPA shell so deep links work.

@@ -115,7 +115,7 @@ pub async fn list_todos(
         TodoRow,
         r#"SELECT id, title, done, created_at FROM todos
            WHERE ($1::bool IS NULL OR done = $1)
-             AND ($2::text IS NULL OR strpos(lower(title), $2) > 0)
+             AND ($2::text IS NULL OR strpos(lower(title), lower($2)) > 0)
            ORDER BY created_at DESC, id DESC"#,
         status,
         q
