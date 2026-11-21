@@ -23,7 +23,7 @@ Works the same on Windows, macOS and Linux: every project command is a bun scrip
 | API | Axum + utoipa | `openapi.json` is derived from the Rust handlers |
 | Contract | `openapi.json` | regenerated and diffed on every check |
 | Client | hey-api + TanStack Query | TS client, hooks and typed errors generated from the contract |
-| UI | React Router (`ssr: false` + `prerender`) | `tsc --noEmit` and a full build |
+| UI | React Router (`prerender` + SPA, or `ssr: true` with `--ssr`) | `tsc --noEmit` and a full build |
 
 A new project is a small working site about the stack itself, with one example of each thing you
 will need:
@@ -39,8 +39,9 @@ will need:
 | `/sign-in` | register and sign in: Argon2id, HttpOnly session cookie, owner-only edits (403) |
 | any other path | the app's 404 page |
 
-In production it is one process. Axum serves `/api/*` and the built pages. There is no Node at
-runtime.
+By default production is one process: Axum serves `/api/*` and the built pages, with no Node at
+runtime. A project created with `--ssr` adds one bun process that renders pages on each request;
+Axum stays in front (see [Rendering](#rendering)).
 
 ## Requirements
 
@@ -112,25 +113,38 @@ Dockerfile, compose.yml  docker compose up -d runs everything
 4. Use the generated `<operationId>Options()` or `<operationId>Mutation()` in a route.
 5. `bun run check`. If a layer disagrees with another, this is where it fails.
 
-## SEO pages and the app
+## Rendering
 
-Paths in `prerender` (`web/react-router.config.ts`) are rendered to HTML at build time, so search
+`web/react-router.config.ts` says which mode this project uses.
+
+**`ssr: false` (default).** Paths in `prerender` are rendered to HTML at build time, so search
 engines see their content. Every other route is a SPA behind the same server, and deep links work
-because Axum falls back to the SPA shell. Unknown `/api/*` paths return a JSON 404, never HTML.
-A prerendered page can use data that exists at build time (see `/api-reference`), but cannot call
-the API while building.
+because Axum falls back to the SPA shell. A prerendered page can use data that exists at build time
+(see `/api-reference`), but cannot call the API while building.
+
+**`ssr: true` (`bun create rr-stack my-app --ssr`).** Every route is rendered on the server by
+`web/server.ts` and then hydrates. Axum stays the only public port: it answers `/api/*` and the files
+in `web/build/client`, and forwards every other request to the renderer at `WEB_SSR_URL`. A route
+gets its first-load data from a `loader` that calls the generated SDK with
+`baseUrl: process.env.API_URL` and the visitor's cookie; `web/app/routes/todo.tsx` is the example,
+so `/app/todos/:id` arrives as HTML with the todo and its title in it. `prerender` still works for
+pages with no per-request data.
+
+In both modes unknown `/api/*` paths return a JSON 404, never HTML.
 
 ## Production
 
-The `Dockerfile` builds one image with the server and the pages. Run it with `DATABASE_URL` set;
+The `Dockerfile` builds one image with the server and the pages (with `--ssr`, also the renderer;
+`compose.yml` runs it twice, as `app` and `web`). Run it with `DATABASE_URL` set;
 it serves on port 3000 and runs migrations on startup. Session cookies are Secure by default; behind a
 reverse proxy, set `TRUST_PROXY=true` so rate limits see the real client address. Without Docker: `bun run build` in `web/`,
 `cargo build --release` in `server/`, then run `server/target/release/server` (`server.exe` on
-Windows) with `WEB_DIST` pointing at `web/build/client`.
+Windows) with `WEB_DIST` pointing at `web/build/client`. With `--ssr`, also run `bun server.ts` in
+`web/` and give the server `WEB_SSR_URL=http://127.0.0.1:3001`.
 
 ## Not included yet
 
-File uploads, server-side rendering (`ssr: true`), deploy recipes.
+File uploads, deploy recipes.
 
 ## License
 

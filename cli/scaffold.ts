@@ -24,6 +24,28 @@ export function appPort(name: string): number {
   return dbPort(name) + 1000;
 }
 
+/** True when version a is older than b. Anything that is not plain x.y.z compares as not older. */
+export function isOlder(a: string, b: string): boolean {
+  const parse = (v: string) => (/^\d+\.\d+\.\d+$/.test(v) ? v.split(".").map(Number) : null);
+  const [x, y] = [parse(a), parse(b)];
+  if (!x || !y) return false;
+  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i]! < y[i]!;
+  return false;
+}
+
+/** The newest published version, or null when the registry does not answer within a moment. */
+export async function latestVersion(registry = process.env.npm_config_registry || "https://registry.npmjs.org/"): Promise<string | null> {
+  try {
+    const res = await fetch(new URL("create-rr-stack/latest", registry.endsWith("/") ? registry : `${registry}/`), {
+      signal: AbortSignal.timeout(1500),
+    });
+    const body = res.ok ? ((await res.json()) as { version?: unknown }) : null;
+    return typeof body?.version === "string" ? body.version : null;
+  } catch {
+    return null;
+  }
+}
+
 // Tracked in the template repo but not part of a new project: the CLI, and the repo's own
 // docs for contributors (README in every language, CONTRIBUTING, the template's license).
 const SKIP_TOP = new Set(["cli", "docs", "CONTRIBUTING.md", "LICENSE", "CHANGELOG.md", "SECURITY.md"]);
@@ -53,18 +75,24 @@ export async function buildTemplate(repo: string, out: string): Promise<void> {
   await copyFile(join(repo, "cli", "project-readme.md"), join(out, "README.md"));
 }
 
-export async function scaffold(opts: { name: string; dest: string; source: string }): Promise<void> {
-  const { name, dest, source } = opts;
+/**
+ * Copies `source` into `dest` and renames it for `name`. `ssr` is the dir of files that replace or
+ * join the template for `ssr: true` apps (cli/ssr): the renderer, a loader route, Docker files.
+ */
+export async function scaffold(opts: { name: string; dest: string; source: string; ssr?: string }): Promise<void> {
+  const { name, dest, source, ssr } = opts;
   const existing = await readdir(dest).catch(() => []);
   if (existing.length > 0) throw new Error(`${dest} is not empty`);
 
-  for (const file of await readdir(source, { recursive: true, withFileTypes: true })) {
-    if (!file.isFile()) continue;
-    const from = join(file.parentPath, file.name);
-    const to = join(dest, from.slice(source.length + 1));
-    await mkdir(dirname(to), { recursive: true });
-    await copyFile(from, to);
-    if (file.name === GITIGNORE) await rename(to, join(dirname(to), ".gitignore"));
+  for (const dir of ssr ? [source, ssr] : [source]) {
+    for (const file of await readdir(dir, { recursive: true, withFileTypes: true })) {
+      if (!file.isFile()) continue;
+      const from = join(file.parentPath, file.name);
+      const to = join(dest, from.slice(dir.length + 1));
+      await mkdir(dirname(to), { recursive: true });
+      await copyFile(from, to);
+      if (file.name === GITIGNORE) await rename(to, join(dirname(to), ".gitignore"));
+    }
   }
 
   const crate = `name = "${name}-server"`;

@@ -3,16 +3,14 @@ mod error;
 mod events;
 mod health;
 mod limit;
+mod pages;
 mod todos;
 
 pub use error::AppError;
 
-use std::path::PathBuf;
-
 use axum::Router;
 use axum::routing::any;
 use sqlx::PgPool;
-use tower_http::services::{ServeDir, ServeFile};
 use utoipa::openapi::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -74,8 +72,10 @@ pub fn openapi() -> OpenApi {
     api_router().split_for_parts().1
 }
 
-/// `web_dist` is the React Router `build/client` dir; `None` serves the API only (tests).
-pub fn app(state: AppState, web_dist: Option<PathBuf>) -> Router {
+pub use pages::{Pages, check_upstream};
+
+/// `pages` says how non-API paths are answered; `None` serves the API only (tests).
+pub fn app(state: AppState, pages: Option<Pages>) -> Router {
     let (router, _) = api_router().split_for_parts();
     let router = router
         .route("/api/events", axum::routing::get(events::events))
@@ -84,12 +84,8 @@ pub fn app(state: AppState, web_dist: Option<PathBuf>) -> Router {
         .route("/api/{*rest}", any(json_404))
         .method_not_allowed_fallback(|| async { AppError::MethodNotAllowed })
         .with_state(state);
-    let router = match web_dist {
-        // Prerendered pages are real files; any other path gets the SPA shell so deep links work.
-        Some(dir) => {
-            let spa = ServeFile::new(dir.join("__spa-fallback.html"));
-            router.fallback_service(ServeDir::new(dir).fallback(spa))
-        }
+    let router = match pages {
+        Some(pages) => pages::serve(router, pages),
         None => router,
     };
     security_headers(router)

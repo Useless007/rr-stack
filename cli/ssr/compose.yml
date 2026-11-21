@@ -1,0 +1,46 @@
+# docker compose up -d       -> the whole app at http://localhost:8000
+# docker compose up -d db    -> only Postgres, for bun run dev
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: rr
+      POSTGRES_PASSWORD: rr
+      POSTGRES_DB: rr
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rr"]
+      interval: 2s
+      retries: 30
+
+  # The public entry: /api, built files, and every other path forwarded to `web`.
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgres://rr:rr@db:5432/rr
+      WEB_SSR_URL: http://web:3001
+      # Secure cookies work on http://localhost. Set "false" only to reach this over plain HTTP from
+      # another machine (a LAN IP); keep it "true" behind HTTPS.
+      COOKIE_SECURE: "true"
+    ports:
+      - "127.0.0.1:8000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Renders pages. Not published: only `app` talks to it, and its loaders call `app` directly.
+  web:
+    build: .
+    command: ["bun", "/app/web/server.ts"]
+    environment:
+      WEB_HOST: 0.0.0.0
+      WEB_PORT: "3001"
+      API_URL: http://app:3000
+    restart: unless-stopped
+
+volumes:
+  pgdata:

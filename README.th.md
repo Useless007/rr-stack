@@ -29,9 +29,11 @@ React ตรงกันทั้งหมด ใช้ได้เหมือ�
 | API | Axum + utoipa | `openapi.json` สร้างจาก handler อัตโนมัติ |
 | สัญญา | `openapi.json` | สร้างใหม่และเทียบทุกครั้งที่รัน `bun run check` |
 | Client | hey-api + TanStack Query | สร้างจากสัญญา รวมถึง error ที่มี type |
-| UI | React Router (`ssr: false` + `prerender`) | `tsc` และ build เต็ม |
+| UI | React Router (`prerender` + SPA หรือ `ssr: true` เมื่อใช้ `--ssr`) | `tsc` และ build เต็ม |
 
-ตอนใช้งานจริงมี process เดียว Axum เสิร์ฟทั้ง API และหน้าเว็บที่ build แล้ว ไม่ต้องมี Node
+ค่าเริ่มต้นตอนใช้งานจริงมี process เดียว Axum เสิร์ฟทั้ง API และหน้าเว็บที่ build แล้ว ไม่ต้องมี Node
+ถ้าสร้างด้วย `bun create rr-stack my-app --ssr` ทุกหน้าจะ render ฝั่ง server โดยเพิ่ม process ของ bun
+หนึ่งตัวไว้หลัง Axum
 
 ## ทำงานอย่างไร
 
@@ -63,8 +65,8 @@ repo นี้ทำไว้ให้
 **ต่อยอดได้อีก**
 
 - อยากให้ search engine เห็นหน้าไหน ใส่ path ไว้ใน `prerender` ของ `web/react-router.config.ts`
-  หน้านั้นจะออกมาเป็น HTML แบบ static ส่วนการ render ฝั่ง server ทุก request (`ssr: true`) ยังไม่ได้
-  ทำไว้ให้ ทำได้โดยรัน server ของ React Router คู่กับ Axum
+  หน้านั้นจะออกมาเป็น HTML แบบ static ถ้าอยากให้ HTML แรกมีข้อมูลของแต่ละคน ให้สร้างแอปด้วย `--ssr`
+  แล้ว `loader` ของ route จะรันฝั่ง server (หน้า todo คือตัวอย่าง)
 - มี backend ภาษาอื่นอยู่แล้ว ฝั่งเว็บอ่านแค่ `openapi.json` backend ไหนที่ออก OpenAPI spec ได้ก็ใช้
   client และ hooks ที่ generate ชุดเดียวกันนี้ได้
 - ไม่เคยเขียน Rust ก็ได้ agent เป็นคนเขียน compiler บอก agent ว่าต้องแก้ตรงไหน และ `bun run check`
