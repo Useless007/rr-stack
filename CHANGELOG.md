@@ -3,7 +3,14 @@
 Versions are the `create-rr-stack` package on npm. A version changes what new projects start
 with; existing projects are not updated.
 
-## 0.3.2 (unreleased)
+## 0.3.3 (unreleased)
+
+- The CLI shows its version and warns when npm has a newer one. bun and npx cache the package,
+  so a plain `bun create rr-stack` could quietly run an old template; the warning gives the
+  `bun create rr-stack@latest <name>` command. Offline or slow registry: no warning, no delay
+  beyond 1.5 s. Honors `npm_config_registry` for mirrors.
+
+## 0.3.2 (2026-11-21)
 
 - `bun run dev` applies migrations before it compiles the server. A new database, or one left
   by an older project with the same name, failed with `relation "sessions" does not exist`.

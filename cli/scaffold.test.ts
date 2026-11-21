@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { appPort, buildTemplate, dbPort, scaffold, validateName } from "./scaffold";
+import { appPort, buildTemplate, dbPort, isOlder, scaffold, validateName } from "./scaffold";
 
 const repoRoot = resolve(import.meta.dir, "..");
 const freshDir = () => join(mkdtempSync(join(tmpdir(), "rr-cli-")), "out");
@@ -121,6 +121,52 @@ describe("scaffold", () => {
     expect(readme).toContain("bun create rr-stack");
   });
 
+});
+
+describe("isOlder", () => {
+  test.each([
+    ["0.3.1", "0.3.2", true],
+    ["0.3.2", "0.10.0", true],
+    ["0.9.9", "1.0.0", true],
+    ["0.3.2", "0.3.2", false],
+    ["0.4.0", "0.3.9", false],
+    ["0.3.2", "not-a-version", false],
+  ])("%p older than %p is %p", (a, b, want) => {
+    expect(isOlder(a, b)).toBe(want);
+  });
+});
+
+describe("update notice", () => {
+  // Async spawn: spawnSync would block the event loop this fake registry answers on.
+  const runAgainst = async (latest: string | null) => {
+    const server = Bun.serve({
+      port: 0,
+      fetch: () => (latest ? Response.json({ version: latest }) : new Response("down", { status: 503 })),
+    });
+    const cwd = mkdtempSync(join(tmpdir(), "rr-run-"));
+    const proc = Bun.spawn([process.execPath, join(import.meta.dir, "index.ts"), "demo", "--no-install", "--no-git"], {
+      cwd,
+      env: { ...process.env, npm_config_registry: `http://localhost:${server.port}/` },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [code, out, err] = await Promise.all([proc.exited, new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
+    server.stop(true);
+    return { code, out: out + err };
+  };
+
+  test("says how to get a newer version when npm has one", async () => {
+    const { code, out } = await runAgainst("99.0.0");
+    expect(code).toBe(0);
+    expect(out).toContain("99.0.0");
+    expect(out).toContain("bun create rr-stack@latest demo");
+  });
+
+  test("stays quiet when the registry is unreachable", async () => {
+    const { code, out } = await runAgainst(null);
+    expect(code).toBe(0);
+    expect(out).not.toContain("@latest");
+  });
 });
 
 describe("create-rr-stack (non-interactive)", () => {

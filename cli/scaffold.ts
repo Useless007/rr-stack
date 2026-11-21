@@ -24,6 +24,28 @@ export function appPort(name: string): number {
   return dbPort(name) + 1000;
 }
 
+/** True when version a is older than b. Anything that is not plain x.y.z compares as not older. */
+export function isOlder(a: string, b: string): boolean {
+  const parse = (v: string) => (/^\d+\.\d+\.\d+$/.test(v) ? v.split(".").map(Number) : null);
+  const [x, y] = [parse(a), parse(b)];
+  if (!x || !y) return false;
+  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i]! < y[i]!;
+  return false;
+}
+
+/** The newest published version, or null when the registry does not answer within a moment. */
+export async function latestVersion(registry = process.env.npm_config_registry || "https://registry.npmjs.org/"): Promise<string | null> {
+  try {
+    const res = await fetch(new URL("create-rr-stack/latest", registry.endsWith("/") ? registry : `${registry}/`), {
+      signal: AbortSignal.timeout(1500),
+    });
+    const body = res.ok ? ((await res.json()) as { version?: unknown }) : null;
+    return typeof body?.version === "string" ? body.version : null;
+  } catch {
+    return null;
+  }
+}
+
 // Tracked in the template repo but not part of a new project: the CLI, and the repo's own
 // docs for contributors (README in every language, CONTRIBUTING, the template's license).
 const SKIP_TOP = new Set(["cli", "docs", "CONTRIBUTING.md", "LICENSE", "CHANGELOG.md", "SECURITY.md"]);

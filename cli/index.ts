@@ -4,7 +4,8 @@ import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { styleText } from "node:util";
-import { appPort, buildTemplate, scaffold, validateName } from "./scaffold";
+import pkg from "./package.json";
+import { appPort, buildTemplate, isOlder, latestVersion, scaffold, validateName } from "./scaffold";
 
 const args = process.argv.slice(2);
 const flags = new Set(args.filter((a) => a.startsWith("--")));
@@ -24,7 +25,14 @@ async function ask<T>(prompt: Promise<T | symbol>): Promise<T> {
   return answer;
 }
 
-p.intro(styleText(["bgCyan", "black"], " create-rr-stack "));
+p.intro(styleText(["bgCyan", "black"], ` create-rr-stack ${pkg.version} `));
+
+// bun and npx cache the package, so a plain `bun create rr-stack` can run an old copy.
+const newest = await latestVersion();
+if (newest && isOlder(pkg.version, newest)) {
+  p.log.warn(`create-rr-stack ${newest} is out; this is ${pkg.version}, an older copy from the cache.\n` +
+    `To start from the newest template, press Ctrl+C and run: ${cyan(`bun create rr-stack@latest ${args.find((a) => !a.startsWith("--")) ?? "my-app"}`)}`);
+}
 
 let name = args.find((a) => !a.startsWith("--")) ?? "";
 if (!name) {
