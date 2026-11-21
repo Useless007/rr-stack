@@ -40,3 +40,9 @@ tower = { version = "0.5.3", features = ["util"] }
 [lints.clippy]
 unwrap_used = "deny"
 expect_used = "deny"
+
+# Argon2 is unusably slow unoptimised; this keeps sign-in fast in `bun run dev` and tests.
+[profile.dev.package.argon2]
+opt-level = 3
+[profile.dev.package.blake2]
+opt-level = 3

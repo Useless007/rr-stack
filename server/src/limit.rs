@@ -1,12 +1,16 @@
 use axum::extract::{ConnectInfo, FromRequestParts};
 use axum::http::request::Parts;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 /// Fixed-window counter per client address. In memory: one server process, resets on restart.
 /// shortcut: per-process only; with several replicas, move the counter to Postgres or Redis.
+///
+/// Per-address limits slow down guessing from one machine; they cannot stop an attacker with many
+/// addresses. Memory is bounded: when full, the oldest window is evicted (O(1) amortised), so a
+/// flood of addresses neither grows memory nor locks out new clients.
 pub struct RateLimiter {
     state: Mutex<Buckets>,
     limit: u32,
@@ -16,7 +20,27 @@ pub struct RateLimiter {
 
 struct Buckets {
     hits: HashMap<IpAddr, (Instant, u32)>,
-    last_prune: Instant,
+    /// Windows in the order they started. An entry is stale when `hits` holds a newer start for
+    /// that key; stale entries are skipped when they reach the front.
+    order: VecDeque<(IpAddr, Instant)>,
+}
+
+impl Buckets {
+    /// Removes the front window if it is stale or matches `pred`; returns whether it looked at one.
+    fn pop_front_if(&mut self, pred: impl Fn(Instant) -> bool) -> bool {
+        let Some(&(key, start)) = self.order.front() else {
+            return false;
+        };
+        let current = self.hits.get(&key).map(|e| e.0) == Some(start);
+        if current && !pred(start) {
+            return false;
+        }
+        self.order.pop_front();
+        if current {
+            self.hits.remove(&key);
+        }
+        true
+    }
 }
 
 impl RateLimiter {
@@ -24,12 +48,10 @@ impl RateLimiter {
         Self::with_capacity(limit, window, 100_000)
     }
 
-    /// `capacity` bounds memory: once that many addresses are tracked, new ones pass untracked
-    /// until old windows expire.
     pub fn with_capacity(limit: u32, window: Duration, capacity: usize) -> Self {
         let state = Buckets {
             hits: HashMap::new(),
-            last_prune: Instant::now(),
+            order: VecDeque::new(),
         };
         Self {
             state: Mutex::new(state),
@@ -53,27 +75,26 @@ impl RateLimiter {
             .state
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        // Prune at most once per window, so a flood cannot make every request scan the map.
-        let full = !state.hits.contains_key(&key) && state.hits.len() >= self.capacity;
-        if full || now.duration_since(state.last_prune) >= window {
-            state
-                .hits
-                .retain(|_, (start, _)| now.duration_since(*start) < window);
-            state.last_prune = now;
-        }
-        // Still full: let the request through untracked. Locking out every new client would be a
-        // worse outage than the attack; Argon2 work stays capped by the hashing semaphore anyway.
-        if !state.hits.contains_key(&key) && state.hits.len() >= self.capacity {
-            return Ok(());
-        }
-        let entry = state.hits.entry(key).or_insert((now, 0));
-        if now.duration_since(entry.0) >= window {
-            *entry = (now, 0);
-        }
-        entry.1 += 1;
-        if entry.1 > self.limit {
+        // Drop expired windows from the front; each entry is removed once, so this is O(1) amortised.
+        while state.pop_front_if(|start| now.duration_since(start) >= window) {}
+        let current = state
+            .hits
+            .get(&key)
+            .copied()
+            .filter(|(start, _)| now.duration_since(*start) < window);
+        let (start, count) = match current {
+            Some(entry) => entry,
+            None => {
+                while state.hits.len() >= self.capacity && state.pop_front_if(|_| true) {}
+                state.order.push_back((key, now));
+                (now, 0)
+            }
+        };
+        let count = count + 1;
+        state.hits.insert(key, (start, count));
+        if count > self.limit {
             Err(window
-                .saturating_sub(now.duration_since(entry.0))
+                .saturating_sub(now.duration_since(start))
                 .as_secs()
                 .max(1))
         } else {
@@ -166,16 +187,25 @@ mod tests {
     }
 
     #[test]
-    fn a_full_table_never_locks_out_new_clients_and_stops_growing() {
-        let limiter = RateLimiter::with_capacity(10, Duration::from_secs(60), 3);
+    fn a_full_table_evicts_the_oldest_client_and_still_counts_the_new_one() {
+        let limiter = RateLimiter::with_capacity(1, Duration::from_secs(60), 3);
         for i in 0..3u8 {
             assert!(limiter.check(IpAddr::from([10, 0, 0, i])).is_ok());
         }
+        let newcomer = IpAddr::from([10, 0, 0, 99]);
         assert!(
-            limiter.check(IpAddr::from([10, 0, 0, 99])).is_ok(),
-            "a new client still gets in"
+            limiter.check(newcomer).is_ok(),
+            "no global lockout when full"
+        );
+        assert!(
+            limiter.check(newcomer).is_err(),
+            "the newcomer is counted, so it is limited too"
         );
         assert_eq!(limiter.tracked(), 3, "memory stays bounded");
+        assert!(
+            limiter.check(IpAddr::from([10, 0, 0, 0])).is_ok(),
+            "the oldest entry was the one evicted"
+        );
     }
 
     #[test]

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
+import { me } from "~/api";
 import { loginMutation, registerMutation } from "~/api/@tanstack/react-query.gen";
 import { errorMessage } from "~/lib/errors";
 import { safeNext } from "~/lib/safe-next";
@@ -17,7 +18,16 @@ export default function SignIn() {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const done = { onSuccess: () => queryClient.invalidateQueries().then(() => navigate(next)) };
+  const [cookieRefused, setCookieRefused] = useState(false);
+  const done = {
+    onSuccess: async () => {
+      // The server set a Secure cookie; a browser on plain HTTP (not localhost) silently drops it.
+      const check = await me();
+      if (check.error) return setCookieRefused(true);
+      await queryClient.invalidateQueries();
+      navigate(next);
+    },
+  };
   const login = useMutation({ ...loginMutation(), ...done });
   const register = useMutation({ ...registerMutation(), ...done });
   const action = creating ? register : login;
@@ -53,6 +63,12 @@ export default function SignIn() {
           />
           {creating && <span className="muted font-normal">At least 8 characters.</span>}
         </label>
+        {cookieRefused && (
+          <p className="text-sm text-fault-deep dark:text-fault" role="alert">
+            Signed in, but this browser did not keep the session cookie. The cookie is Secure, so it needs
+            HTTPS or localhost. On plain HTTP elsewhere, set COOKIE_SECURE=false in .env.
+          </p>
+        )}
         {action.error && (
           <p className="text-sm text-fault-deep dark:text-fault" role="alert">
             {errorMessage(action.error)}

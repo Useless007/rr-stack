@@ -33,17 +33,24 @@ pub async fn events(ws: WebSocketUpgrade, State(state): State<AppState>) -> Resp
 
 async fn forward(mut socket: WebSocket, mut rx: broadcast::Receiver<TodoEvent>) {
     loop {
-        let event = match rx.recv().await {
-            Ok(event) => event,
-            // Missed some events: the client refetches on any event, so carry on.
-            Err(broadcast::error::RecvError::Lagged(_)) => continue,
-            Err(broadcast::error::RecvError::Closed) => break,
-        };
-        let Ok(text) = serde_json::to_string(&event) else {
-            continue;
-        };
-        if socket.send(Message::Text(text.into())).await.is_err() {
-            break; // client went away
+        tokio::select! {
+            event = rx.recv() => {
+                let event = match event {
+                    Ok(event) => event,
+                    // Missed some events: the client refetches on any event, so carry on.
+                    Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(broadcast::error::RecvError::Closed) => break,
+                };
+                let Ok(text) = serde_json::to_string(&event) else { continue };
+                if socket.send(Message::Text(text.into())).await.is_err() {
+                    break;
+                }
+            }
+            // Reading the socket is how a closed tab is noticed right away, not at the next event.
+            incoming = socket.recv() => match incoming {
+                None | Some(Err(_)) | Some(Ok(Message::Close(_))) => break,
+                Some(Ok(_)) => {}
+            },
         }
     }
 }

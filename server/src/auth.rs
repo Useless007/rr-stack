@@ -171,16 +171,20 @@ static DUMMY_HASH: LazyLock<String> = LazyLock::new(|| {
         .unwrap_or_default()
 });
 
-async fn verify_password(password: Password, hash: String) -> bool {
+/// `None` (unknown email) is checked against a dummy hash so it costs the same time as a real one.
+async fn verify_password(password: Password, hash: Option<String>) -> bool {
     let Ok(_permit) = HASHING.acquire().await else {
         return false;
     };
     tokio::task::spawn_blocking(move || {
-        PasswordHash::new(&hash).is_ok_and(|parsed| {
+        let known = hash.is_some();
+        let hash = hash.as_deref().unwrap_or(DUMMY_HASH.as_str());
+        let matches = PasswordHash::new(hash).is_ok_and(|parsed| {
             Argon2::default()
                 .verify_password(password.0.as_bytes(), &parsed)
                 .is_ok()
-        })
+        });
+        matches && known
     })
     .await
     .unwrap_or(false)
@@ -244,10 +248,11 @@ pub async fn login(
     )
     .fetch_optional(&state.db)
     .await?;
-    let hash = found
-        .as_ref()
-        .map_or_else(|| DUMMY_HASH.clone(), |u| u.password_hash.clone());
-    let ok = verify_password(creds.password, hash).await;
+    let ok = verify_password(
+        creds.password,
+        found.as_ref().map(|u| u.password_hash.clone()),
+    )
+    .await;
     let Some(row) = found.filter(|_| ok) else {
         return Err(AppError::BadCredentials);
     };

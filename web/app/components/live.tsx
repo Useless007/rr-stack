@@ -18,6 +18,13 @@ export function useLiveTodos(): { state: LiveState; last: TodoEvent | null } {
     let retry: ReturnType<typeof setTimeout> | undefined;
     let delay = 500;
     let closed = false;
+    let everConnected = false;
+    // Only data that todo events can change (by generated operation id); not the session.
+    const todoQueries = new Set(["listTodos", "getTodo", "getStats"]);
+    const refresh = () =>
+      queryClient.invalidateQueries({
+        predicate: (q) => todoQueries.has((q.queryKey[0] as { _id?: string } | undefined)?._id ?? ""),
+      });
 
     const connect = () => {
       const url = new URL("/api/events", window.location.href);
@@ -26,11 +33,17 @@ export function useLiveTodos(): { state: LiveState; last: TodoEvent | null } {
       socket.onopen = () => {
         delay = 500;
         setState("live");
+        // Back after a drop (server restart): changes made meanwhile were never pushed, so refetch.
+        if (everConnected) void refresh();
+        everConnected = true;
       };
       socket.onmessage = (msg) => {
-        const event = JSON.parse(String(msg.data)) as TodoEvent;
-        setLast(event);
-        void queryClient.invalidateQueries();
+        try {
+          setLast(JSON.parse(String(msg.data)) as TodoEvent);
+        } catch {
+          return;
+        }
+        void refresh();
       };
       socket.onclose = () => {
         if (closed) return;
