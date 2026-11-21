@@ -1,3 +1,5 @@
+# Never uploaded: local secrets. (`vercel deploy` reads this file, not .gitignore.)
+.env
 # Not uploaded by `vercel deploy`: the Docker build makes its own.
 server/target/
 node_modules/

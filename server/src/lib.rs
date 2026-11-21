@@ -32,6 +32,7 @@ impl AppState {
                 limit: std::env::var("SIGN_IN_LIMIT")
                     .ok()
                     .and_then(|v| v.parse().ok())
+                    .filter(|n: &i32| *n > 0)
                     .unwrap_or(10),
                 window: std::time::Duration::from_secs(60),
             },

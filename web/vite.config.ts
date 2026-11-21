@@ -6,8 +6,11 @@ import { defineConfig, loadEnv } from "vite";
 // built. Read from the environment first, then the project's .env (one folder up), then
 // web/.env.production: a committed file, for hosts such as Vercel that pass no variables to a build.
 function siteUrl(mode: string): string {
-  const env = { ...loadEnv(mode, ".", "SITE_URL"), ...loadEnv(mode, "..", "SITE_URL") };
-  const value = env.SITE_URL || "http://localhost:3000";
+  const value =
+    process.env.SITE_URL ||
+    loadEnv(mode, "..", "SITE_URL").SITE_URL ||
+    loadEnv(mode, ".", "SITE_URL").SITE_URL ||
+    "http://localhost:3000";
   if (!URL.canParse(value) || !/^https?:$/.test(new URL(value).protocol)) {
     throw new Error(`SITE_URL must look like https://example.com, got "${value}"`);
   }

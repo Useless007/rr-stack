@@ -12,9 +12,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenvy::from_filename("../.env").ok();
     // Neon (and Vercel's Postgres integrations) set DATABASE_URL to a connection pooler, which
     // drops LISTEN (realtime events) and the session lock migrations take. Use the direct one.
-    let database_url = std::env::var("DATABASE_URL_UNPOOLED")
-        .or_else(|_| std::env::var("DATABASE_URL"))
-        .map_err(|_| "DATABASE_URL is not set")?;
+    let (database_var, database_url) = ["DATABASE_URL_UNPOOLED", "DATABASE_URL"]
+        .into_iter()
+        .find_map(|name| std::env::var(name).ok().map(|url| (name, url)))
+        .ok_or("DATABASE_URL is not set")?;
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".into());
     // An empty WEB_DIST serves the API only (`bun run dev`, where Vite serves the pages).
     let dist = std::env::var("WEB_DIST").unwrap_or_else(|_| "../web/build/client".into());
@@ -31,7 +32,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         (false, _) => Some(Pages::Spa(PathBuf::from(dist))),
     };
 
-    let db = sqlx::PgPool::connect(&database_url).await?;
+    // Each server process holds up to this many connections (plus one for realtime events). On a
+    // host that starts many processes against a small database, lower it with DATABASE_POOL_MAX.
+    let pool_max = std::env::var("DATABASE_POOL_MAX")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(10);
+    tracing::info!("database from {database_var}, up to {pool_max} connections");
+    let db = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(pool_max)
+        .connect(&database_url)
+        .await?;
     sqlx::migrate!().run(&db).await?;
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;

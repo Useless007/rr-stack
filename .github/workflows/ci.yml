@@ -167,5 +167,6 @@ jobs:
           docker run -d --name one --network ssr-docker_default -p 127.0.0.1:39400:3000 \
             -e DATABASE_URL=postgres://ssr_docker:ssr_docker@db:5432/ssr_docker -e COOKIE_SECURE=false "$image"
           curl -fsS --retry 30 --retry-all-errors --retry-delay 1 http://127.0.0.1:39400/api/health
+          curl -fsS http://127.0.0.1:39400/ | grep -q "typed from the database to the screen"
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:39400/no-such-page)" = 404
           docker rm -f one

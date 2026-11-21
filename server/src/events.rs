@@ -91,19 +91,27 @@ impl Default for Hub {
 
 async fn relay(mut listener: PgListener, tx: broadcast::Sender<Relayed>) {
     loop {
-        // `try_recv` reports a lost connection as `Ok(None)` and reconnects on the next call.
         match listener.try_recv().await {
             Ok(Some(n)) => {
                 let _ = tx.send(Relayed::Event(n.payload().into()));
             }
+            // The connection dropped and `try_recv` has already reconnected and listens again.
             Ok(None) => {
-                tracing::warn!("event listener reconnecting; open pages will refetch");
+                tracing::warn!("event listener reconnected; open pages will refetch");
                 let _ = tx.send(Relayed::Resync);
             }
+            // Reconnecting failed (database down): wait until a query works, which also restores
+            // LISTEN, and only then tell pages to refetch, once.
             Err(err) => {
-                tracing::warn!("event listener: {err}; retrying in 1 s");
+                tracing::warn!("event listener: {err}; retrying every second");
+                while sqlx::query("SELECT 1")
+                    .execute(&mut listener)
+                    .await
+                    .is_err()
+                {
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
                 let _ = tx.send(Relayed::Resync);
-                tokio::time::sleep(Duration::from_secs(1)).await;
             }
         }
     }

@@ -281,7 +281,8 @@ async fn responses_carry_security_headers(db: PgPool) {
 async fn too_many_sign_in_attempts_from_one_address_get_429(db: PgPool) {
     use axum::extract::ConnectInfo;
     use tower::ServiceExt;
-    let state = server::AppState::new(db);
+    let mut state = server::AppState::new(db);
+    state.sign_in_limit.limit = 10;
     let attempt = |ip: [u8; 4]| {
         let mut req = axum::http::Request::post("/api/auth/login")
             .header(axum::http::header::CONTENT_TYPE, "application/json")
@@ -322,7 +323,9 @@ async fn the_sign_in_limit_counts_across_server_processes(db: PgPool) {
                 json!({ "email": "x@example.com", "password": "wrong password" }).to_string(),
             ))
             .unwrap();
-        let status = server::app(server::AppState::new(db.clone()), None)
+        let mut state = server::AppState::new(db.clone());
+        state.sign_in_limit.limit = 10;
+        let status = server::app(state, None)
             .oneshot(req)
             .await
             .unwrap()

@@ -137,8 +137,14 @@ bun run e2e --url https://your-app.vercel.app
   a Docker build. It is the public address, not a secret. Change it when you add your own domain.
 - The server uses `DATABASE_URL_UNPOOLED` when it is set. Neon's default `DATABASE_URL` goes through
   a connection pooler, which drops the `LISTEN` that realtime updates need.
-- `bun run e2e --url` signs up users and adds todos. Point it at a deployment whose data you do not
-  mind, or delete them afterwards.
+- `bun run e2e --url` signs up four users and adds todos. Point it at a deployment whose data you do
+  not mind, or delete them afterwards. The sign-in limit (10 a minute per address) allows two runs a
+  minute from one machine.
+- Without `TRUST_PROXY=true`, every visitor looks like Vercel's own address to the sign-in limit, so
+  the whole site would share 10 attempts a minute.
+- Each instance opens up to 10 database connections. If Neon reports too many connections, set
+  `DATABASE_POOL_MAX` lower (for example 3).
+- `.vercelignore` keeps `.env` out of the upload. Keep secrets in `vercel env`, never in a file.
 
 ### What is different from a VPS
 

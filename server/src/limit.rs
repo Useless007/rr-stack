@@ -36,13 +36,16 @@ impl RateLimit {
         )
         .fetch_one(db)
         .await?;
-        if row.hits == 1 {
-            sqlx::query!(
+        // Housekeeping: a failure here must not turn a counted attempt into an error.
+        if row.hits == 1
+            && let Err(err) = sqlx::query!(
                 "DELETE FROM rate_limits WHERE window_start <= now() - make_interval(secs => $1)",
                 secs
             )
             .execute(db)
-            .await?;
+            .await
+        {
+            tracing::warn!("could not delete expired rate limit windows: {err}");
         }
         if row.hits > self.limit {
             let retry_after_secs = u64::try_from(row.retry_after).unwrap_or(1).max(1);
