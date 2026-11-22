@@ -10,9 +10,13 @@
 
 React Router + Rust (Axum) ที่ type ตรงกันตั้งแต่ฐานข้อมูลจนถึงหน้าจอ
 
+<p><a href="https://rrstack.vercel.app"><img alt="RR stack: ปู Rust กำลังหนีบโลโก้ React" src="https://raw.githubusercontent.com/Useless007/rr-stack/main/web/public/og.png" width="600"></a></p>
+
 ```bash
 bun create rr-stack my-app
 ```
+
+**ลองของจริง: [rrstack.vercel.app](https://rrstack.vercel.app)** เป็นแอปที่สร้างด้วย `bun create rr-stack --ssr` โดยไม่แก้อะไรเลย รันบน Vercel ใครก็สมัครและเพิ่ม todo ได้ ข้อมูลในนั้นจึงเป็นสาธารณะ และถูกล้างทุกวัน
 
 RR stack คือโปรเจกต์ตั้งต้นสำหรับแอปที่ AI agent เป็นคนเขียน และคนเป็นคนตรวจ มีคำสั่งเดียวที่ตอบว่า
 "งานเสร็จหรือยัง" คือ `bun run check` ถ้าจบด้วย exit 0 แปลว่า SQL, Rust API, สัญญา OpenAPI และโค้ด
@@ -40,6 +44,22 @@ React ตรงกันทั้งหมด ใช้ได้เหมือ�
 ![การเปลี่ยนแปลงเดินทางจากฐานข้อมูลถึงหน้าจออย่างไร และ bun run check ตรวจตรงไหน](https://raw.githubusercontent.com/Useless007/rr-stack/main/docs/assets/change-flow.svg)
 
 ![ตอนรันจริง Rust binary ตัวเดียวเสิร์ฟทั้ง API และหน้าเว็บ](https://raw.githubusercontent.com/Useless007/rr-stack/main/docs/assets/runtime.svg)
+
+## ทำไมไม่ให้ AI สร้างเองตั้งแต่ศูนย์
+
+AI agent เขียนทั้งหมดนี้จากโฟลเดอร์เปล่าได้ แต่สิ่งที่มันทำเองไม่ได้คือรู้ว่างานเสร็จหรือยัง มันจะหยุดตอนโค้ด
+compile ผ่าน แล้วคุณเป็นคนเจอปัญหาที่เหลือ ที่นี่คำว่า "เสร็จ" คือคำสั่ง 2 คำสั่งที่ fail ได้จริง
+และทุกข้อข้างล่างวัดผลมาแล้ว ไม่ได้คาดเดา:
+
+- **หน้าเว็บที่พังถูกจับได้ก่อนถึงผู้ใช้** เราแอบใส่บั๊ก 3 แบบ คือ hydration ไม่ตรง, บันทึกแล้วตัวอักษรหาย
+  และปุ่มเปลี่ยนชื่อ `bun run e2e` fail ทุกแบบพร้อมภาพหน้าจอ
+- **โค้ดชุดเดียวกันรันได้ทั้งบนเซิร์ฟเวอร์ของคุณและบน Vercel** browser test ทั้งชุดผ่าน 11 จาก 11 บน
+  Vercel production ทั้งแอปปกติและแอป `--ssr` รวม realtime ด้วย
+- **ทุกครั้งที่ push ทดสอบแบบเดียวกับที่ผู้ใช้ใช้จริง** CI รัน `check`, `smoke` และ `e2e` บน Linux และ
+  Windows สร้างแอปทั้ง 4 แบบ (SPA หรือ SSR, Tailwind หรือ Astryx) แล้วตรวจทุกแบบ และทดสอบชุด
+  production ผ่าน HTTPS กับ Caddy
+- **แต่ละชั้นเพี้ยนกันแบบเงียบๆ ไม่ได้** เปลี่ยนชื่อคอลัมน์แล้ว Rust build ไม่ผ่าน แก้ handler แล้วการเทียบ
+  สัญญา API ไม่ผ่าน และ client ฝั่ง TypeScript ถูก generate ใหม่เสมอ ไม่มีใครแก้ด้วยมือ
 
 ## ทำไมไม่ต่อเองทั้งหมด
 

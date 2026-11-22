@@ -10,9 +10,13 @@
 
 React Router + Rust (Axum), typed from the database to the screen.
 
+<p><a href="https://rrstack.vercel.app"><img alt="RR stack: a Rust crab holding the React logo" src="https://raw.githubusercontent.com/Useless007/rr-stack/main/web/public/og.png" width="600"></a></p>
+
 ```bash
 bun create rr-stack my-app
 ```
+
+**Live demo: [rrstack.vercel.app](https://rrstack.vercel.app)**, an unmodified `bun create rr-stack --ssr` app on Vercel. Anyone can sign up and add todos there, so what you see is public and emptied every day.
 
 RR stack is a starter for apps that AI agents write and people review. One command,
 `bun run check`, answers "is it done?". If it exits 0, the SQL, the Rust API, the OpenAPI
@@ -40,6 +44,23 @@ process behind Axum.
 ![How a change travels from the database to the screen, and where bun run check verifies it](https://raw.githubusercontent.com/Useless007/rr-stack/main/docs/assets/change-flow.svg)
 
 ![At runtime one Rust binary serves the API and the pages](https://raw.githubusercontent.com/Useless007/rr-stack/main/docs/assets/runtime.svg)
+
+## Why not just ask an AI to build it?
+
+An agent can write all of this from an empty folder. What it cannot do on its own is know when it is
+finished: it stops when the code compiles, and you find the rest. Here "done" is two commands that
+fail, and each claim below was measured, not assumed:
+
+- **Broken pages are caught, not shipped.** We planted three bugs: a hydration mismatch, a save that
+  dropped a character, a renamed button. `bun run e2e` failed on each one, with a screenshot of the
+  page.
+- **The same code runs on your server and on Vercel.** The whole browser suite passed 11 of 11
+  against Vercel production, for the default app and an `--ssr` app, realtime updates included.
+- **Every push is tested the way users run it.** CI runs `check`, `smoke` and `e2e` on Linux and
+  Windows, scaffolds all four variants (SPA or SSR, Tailwind or Astryx) and checks each one, and
+  serves the production setup over HTTPS through Caddy.
+- **Layers cannot drift apart quietly.** A renamed column fails the Rust build, a changed handler
+  fails the contract diff, and the TypeScript client is regenerated, never hand-edited.
 
 ## Why not wire it yourself?
 

@@ -10,9 +10,13 @@
 
 React Router + Rust (Axum)。データベースから画面まで、型がつながったスターターです。
 
+<p><a href="https://rrstack.vercel.app"><img alt="RR stack：React のロゴをはさむ Rust のカニ" src="https://raw.githubusercontent.com/Useless007/rr-stack/main/web/public/og.png" width="600"></a></p>
+
 ```bash
 bun create rr-stack my-app
 ```
+
+**ライブデモ：[rrstack.vercel.app](https://rrstack.vercel.app)**。`bun create rr-stack --ssr` で作ったアプリを手を加えずに Vercel で動かしています。誰でも登録して todo を追加できるので、内容は公開され、毎日消去されます。
 
 RR stack は、AI エージェントがコードを書き、人がレビューするアプリのためのスターターです。
 「終わった？」に答えるコマンドは `bun run check` ひとつだけ。終了コードが 0 なら、SQL、Rust API、
@@ -41,6 +45,22 @@ AI エージェントが持ち込むバグの多くは、2 つの層の食い違
 ![変更がデータベースから画面まで伝わる流れと、bun run check が検証する場所](https://raw.githubusercontent.com/Useless007/rr-stack/main/docs/assets/change-flow.svg)
 
 ![実行時は 1 つの Rust バイナリが API とページを配信](https://raw.githubusercontent.com/Useless007/rr-stack/main/docs/assets/runtime.svg)
+
+## AI にゼロから作らせればよいのでは？
+
+AI エージェントは空のフォルダからこれをすべて書けます。自分でできないのは、いつ完成したかを知ることです。
+コンパイルが通れば止まり、残りの問題はあなたが見つけることになります。ここでは「完成」は本当に失敗する
+2 つのコマンドで、以下はどれも推測ではなく実際に測ったものです。
+
+- **壊れたページは出荷前に止まる。** わざと 3 つのバグを入れました：hydration の不一致、保存時に 1 文字
+  消える、名前の変わったボタン。`bun run e2e` はそれぞれで失敗し、ページのスクリーンショットを残しました。
+- **同じコードが自分のサーバーでも Vercel でも動く。** ブラウザテスト一式が Vercel の本番環境で 11 件中
+  11 件通りました。通常のアプリと `--ssr` のアプリの両方で、リアルタイム更新も含みます。
+- **プッシュのたびに、利用者と同じ使い方でテストする。** CI は Linux と Windows で `check`、`smoke`、
+  `e2e` を実行し、4 つの構成（SPA か SSR、Tailwind か Astryx）をすべて生成して確認し、本番構成を
+  Caddy 経由の HTTPS で動かします。
+- **層どうしが黙ってずれることはない。** 列名を変えれば Rust のビルドが失敗し、ハンドラを変えれば契約の
+  差分チェックが失敗し、TypeScript クライアントは常に再生成され、手で編集されることはありません。
 
 ## 自分で組み合わせればよいのでは？
 

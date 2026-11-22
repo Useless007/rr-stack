@@ -21,6 +21,9 @@ with; existing projects are not updated.
 - `SITE_URL` can also come from a committed `web/.env.production`, for hosts that pass no variables
   to a build.
 - `bun run e2e --url <address>` runs the browser tests against a deployment.
+- A live demo at https://rrstack.vercel.app, an unmodified `--ssr` app, linked from the READMEs with
+  a summary of what is measured: planted bugs caught by `e2e`, the suite passing on Vercel, and
+  what CI runs. Its data is public and emptied daily by a workflow that new apps do not get.
 
 ## 0.6.0 (2026-11-22)
 

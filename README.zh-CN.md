@@ -10,9 +10,13 @@
 
 React Router + Rust (Axum)，从数据库到界面全程类型一致。
 
+<p><a href="https://rrstack.vercel.app"><img alt="RR stack：一只 Rust 螃蟹夹着 React 标志" src="https://raw.githubusercontent.com/Useless007/rr-stack/main/web/public/og.png" width="600"></a></p>
+
 ```bash
 bun create rr-stack my-app
 ```
+
+**在线演示：[rrstack.vercel.app](https://rrstack.vercel.app)**，一个未经修改的 `bun create rr-stack --ssr` 应用，运行在 Vercel 上。任何人都能注册并添加待办，所以里面的内容是公开的，并且每天清空。
 
 RR stack 是一个项目起步模板，适合由 AI agent 编写代码、由人来审查的应用。只需一条命令
 `bun run check` 就能回答"做完了吗？"。退出码为 0，就说明 SQL、Rust API、OpenAPI 契约和 React
@@ -39,6 +43,20 @@ AI agent 引入的大多数 bug，本质上是两层之间不一致：改了列�
 ![一次改动如何从数据库传到界面，以及 bun run check 在哪里校验](https://raw.githubusercontent.com/Useless007/rr-stack/main/docs/assets/change-flow.svg)
 
 ![运行时由一个 Rust 二进制同时提供 API 和页面](https://raw.githubusercontent.com/Useless007/rr-stack/main/docs/assets/runtime.svg)
+
+## 为什么不直接让 AI 从零写？
+
+AI 智能体可以从空文件夹写出这一切。它自己做不到的是判断什么时候算完成：代码能编译它就停下，剩下的问题
+由你来发现。在这里，"完成"是两条真的会失败的命令，下面每一条都经过实际测量，而不是假设：
+
+- **坏掉的页面会被拦下，而不是发布出去。** 我们故意植入了三个 bug：hydration 不一致、保存时丢掉一个
+  字符、改名的按钮。`bun run e2e` 每个都失败了，并附上页面截图。
+- **同一份代码既能跑在你的服务器上，也能跑在 Vercel 上。** 整套浏览器测试在 Vercel 生产环境 11 项全部
+  通过，默认应用和 `--ssr` 应用都是，实时更新也包括在内。
+- **每次推送都按用户的使用方式测试。** CI 在 Linux 和 Windows 上运行 `check`、`smoke` 和 `e2e`，
+  生成全部四种变体（SPA 或 SSR，Tailwind 或 Astryx）并逐一检查，还通过 Caddy 以 HTTPS 运行生产配置。
+- **各层不会悄悄偏离。** 改了列名，Rust 构建失败；改了 handler，契约对比失败；TypeScript 客户端
+  总是重新生成，从不手改。
 
 ## 为什么不自己拼起来？
 
