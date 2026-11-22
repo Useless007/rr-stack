@@ -2,12 +2,39 @@ name: Bug report
 description: Something in RR stack or create-rr-stack does not work
 labels: [bug]
 body:
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where it breaks
+      options:
+        - Creating the project (bun create / bunx create-rr-stack)
+        - bun run dev
+        - bun run check
+        - bun run smoke
+        - bun run e2e
+        - Deploying to a VPS (Docker, compose.prod.yml)
+        - Deploying to Vercel
+        - The running app (a page, the API, realtime, sign-in)
+        - The docs (README, AGENTS.md, DEPLOY.md) say something wrong
+    validations:
+      required: true
   - type: textarea
     id: what
     attributes:
       label: What happened
-      description: The command you ran and its full output.
+      description: The command you ran and its full output. For a page, what you clicked and what you saw.
       render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen again
+      description: Starting from a fresh `bunx create-rr-stack@latest` if you can.
+      placeholder: |
+        1. bunx create-rr-stack@latest my-app --ssr --tailwind
+        2. cd my-app && bun run dev
+        3. Open /app/todos while signed out
     validations:
       required: true
   - type: textarea
@@ -21,6 +48,27 @@ body:
     attributes:
       label: Versions
       description: OS, `bun --version`, `rustc --version`, and the create-rr-stack version that made the project.
-      placeholder: Windows 11, bun 1.2.23, rustc 1.99.1, create-rr-stack 0.2.0
+      placeholder: Windows 11, bun 1.3.2, rustc 1.99.1, create-rr-stack 0.7.1
+    validations:
+      required: true
+  - type: dropdown
+    id: options
+    attributes:
+      label: Options the project was created with
+      multiple: true
+      options:
+        - SPA + prerender (default)
+        - "--ssr"
+        - Tailwind (default)
+        - "--astryx"
+  - type: dropdown
+    id: origin
+    attributes:
+      label: Is the broken code from the template?
+      description: e2e failures save screenshots in `web/e2e/results/`; attach them below if you have them.
+      options:
+        - Yes, I had not changed that code
+        - It is code I (or my AI agent) changed or added
+        - Not sure
     validations:
       required: true

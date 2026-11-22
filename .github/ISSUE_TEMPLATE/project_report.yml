@@ -1,0 +1,44 @@
+name: Report from a real project
+description: You built something with RR stack. Tell us what the template got wrong, missed, or did not need.
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One report per project is fine. If your AI agent reviewed the project, paste its findings below as they are.
+        Several separate bugs? A bug report for each one is easier to fix.
+  - type: input
+    id: project
+    attributes:
+      label: What you built
+      description: One line. A link if it is public.
+      placeholder: A booking app for a clinic, SSR, deployed on Vercel
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: OS, and the create-rr-stack version that made the project.
+      placeholder: Windows 11, create-rr-stack 0.7.1
+    validations:
+      required: true
+  - type: textarea
+    id: broke
+    attributes:
+      label: What broke or misled you
+      description: Bugs in template code, and places where AGENTS.md, README or DEPLOY.md was wrong or sent the AI the wrong way.
+  - type: textarea
+    id: added
+    attributes:
+      label: What you had to add yourself
+      description: Things the template should arguably have had (uploads, roles, scheduled jobs...).
+  - type: textarea
+    id: unused
+    attributes:
+      label: What you never used or deleted
+  - type: textarea
+    id: checks
+    attributes:
+      label: check, smoke and e2e
+      description: Any time they passed while the app was broken, or failed while the code was right.
