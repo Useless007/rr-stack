@@ -3,6 +3,16 @@
 Versions are the `create-rr-stack` package on npm. A version changes what new projects start
 with; existing projects are not updated.
 
+## 0.7.1 (2026-11-22)
+
+- Signed out, moving between pages no longer makes the header's "Sign in" link vanish for a moment.
+  A 401 from `/api/auth/me` used to be cached as an error, so every page asked again and showed
+  nothing while it waited. "Signed out" is now cached as an answer, like a signed-in user.
+- e2e: `settle()` now waits for the page's requests to finish after a client-side navigation too;
+  Playwright's "networkidle" returned at once there, which is why no test caught the flicker. New
+  tests: the Sign in link never leaves the header between pages, and signing out shows the
+  signed-out page.
+
 ## 0.7.0 (2026-11-22)
 
 - Deploy to Vercel as well as to your own server, with the same features. The app's Docker image

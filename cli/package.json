@@ -1,6 +1,6 @@
 {
   "name": "create-rr-stack",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "type": "module",
   "bin": {
     "create-rr-stack": "index.ts"

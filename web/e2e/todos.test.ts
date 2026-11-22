@@ -83,3 +83,13 @@ test("someone else's todo cannot be changed", () =>
     expect(await box.isDisabled()).toBe(true);
     expect(await other!.getByRole("button", { name: `Delete "${title}"` }).count()).toBe(0);
   }));
+
+test("signing out shows the signed-out page right away", () =>
+  withPages("sign out", 1, async ([page]) => {
+    await signUp(page!);
+    const header = page!.getByRole("banner");
+    await header.getByRole("button", { name: "Sign out" }).click();
+    await header.getByRole("link", { name: "Sign in" }).waitFor();
+    await page!.getByText("to add todos and change your own").waitFor();
+    expect(await page!.getByLabel("New todo").count()).toBe(0);
+  }));

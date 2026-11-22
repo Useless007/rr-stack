@@ -1,12 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { User } from "~/api";
-import { logoutMutation, meOptions, meQueryKey } from "~/api/@tanstack/react-query.gen";
+import { me as getMe, type User } from "~/api";
+import { logoutMutation, meQueryKey } from "~/api/@tanstack/react-query.gen";
 
-/** The signed-in user, or null. A 401 from /api/auth/me simply means "signed out". */
+/**
+ * The signed-in user, or null when signed out. "Signed out" (a 401 from /api/auth/me) is an answer,
+ * not an error: it is cached like a user is, so moving between pages neither asks again nor blanks
+ * the parts of the page that depend on it while it does.
+ */
 export function useSession(): { user: User | null; loading: boolean } {
-  const me = useQuery({ ...meOptions(), retry: false, staleTime: 60_000 });
-  // TanStack Query keeps the last good data when a refetch fails; a failed /me means signed out.
-  return { user: me.isError ? null : (me.data ?? null), loading: me.isPending };
+  const me = useQuery({
+    queryKey: meQueryKey(),
+    queryFn: async ({ signal }): Promise<User | null> => {
+      const res = await getMe({ signal });
+      if (res.response?.status === 401) return null;
+      if (res.error !== undefined || !res.data) throw res.error ?? new Error("could not load the session");
+      return res.data;
+    },
+    retry: false,
+    staleTime: 60_000,
+  });
+  return { user: me.data ?? null, loading: me.isPending };
 }
 
 export function useSignOut() {

@@ -28,6 +28,11 @@ async function watch(context: BrowserContext): Promise<{ page: Page; errors: str
     }
   });
   // ERR_ABORTED is a request the page cancelled itself, such as navigating away.
+  const pending = new Set<unknown>();
+  inFlight.set(page, pending);
+  page.on("request", (r) => pending.add(r));
+  page.on("requestfinished", (r) => pending.delete(r));
+  page.on("requestfailed", (r) => pending.delete(r));
   page.on("requestfailed", (r) => r.failure()?.errorText !== "net::ERR_ABORTED" && errors.push(`failed: ${r.url()} ${r.failure()?.errorText}`));
   return { page, errors };
 }
@@ -65,7 +70,17 @@ export async function withPages(name: string, count: number, test: (pages: Page[
   }
 }
 
-/** Waits until React has hydrated and the page's first requests are done. */
+/** Requests each page has started and not finished; a WebSocket is not a request here. */
+const inFlight = new WeakMap<Page, Set<unknown>>();
+
+/**
+ * Waits until the page has made no request for 300 ms. Unlike Playwright's "networkidle", this also
+ * works after a client-side navigation, where the page fetches data without loading a document.
+ */
 export async function settle(page: Page) {
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("load");
+  const pending = inFlight.get(page) ?? new Set();
+  for (let quiet = 0; quiet < 300; quiet = pending.size ? 0 : quiet + 50) {
+    await page.waitForTimeout(50);
+  }
 }

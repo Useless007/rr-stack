@@ -31,3 +31,25 @@ test("the navigation links reach their pages", () =>
     await page!.waitForURL("**/how-it-works");
     await page!.getByRole("heading", { name: "How it works" }).waitFor();
   }));
+
+test("the header's Sign in link stays put while moving between pages signed out", () =>
+  withPages("no sign-in flicker", 1, async ([page]) => {
+    await page!.goto("/app");
+    await settle(page!);
+    const header = page!.getByRole("banner");
+    await header.getByRole("link", { name: "Sign in" }).waitFor();
+    // Count every moment the link is missing from the header, however short.
+    await page!.evaluate(() => {
+      const w = window as unknown as { missing: number };
+      w.missing = 0;
+      const inHeader = () =>
+        [...document.querySelectorAll("header a")].some((a) => a.textContent?.trim() === "Sign in");
+      new MutationObserver(() => {
+        if (!inHeader()) w.missing++;
+      }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    });
+    await page!.getByRole("navigation", { name: "Playground" }).getByRole("link", { name: "Todos" }).click();
+    await page!.waitForURL("**/app/todos");
+    await settle(page!);
+    expect(await page!.evaluate(() => (window as unknown as { missing: number }).missing)).toBe(0);
+  }));
