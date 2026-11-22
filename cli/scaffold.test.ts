@@ -123,6 +123,9 @@ describe("scaffold", () => {
     expect(existsSync(join(out, ".env.local"))).toBeFalse();
     expect(existsSync(join(out, ".codegraph"))).toBeFalse();
     expect(existsSync(join(out, "cli"))).toBeFalse();
+    // The template repo's own demo upkeep, with its secret, is not part of a new project.
+    expect(existsSync(join(out, ".github/workflows/demo-reset.yml"))).toBeFalse();
+    expect(existsSync(join(out, ".github/workflows/ci.yml"))).toBeTrue();
   });
 
   test("survives npm dropping .gitignore files from the package", async () => {

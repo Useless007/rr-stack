@@ -1,0 +1,20 @@
+# Empties the public demo at https://rrstack.vercel.app once a day, so whatever visitors typed there
+# does not stay. Only in the rr-stack repository: create-rr-stack leaves this file out of new apps.
+name: demo-reset
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  reset:
+    if: github.repository == 'Useless007/rr-stack'
+    runs-on: ubuntu-latest
+    steps:
+      - name: empty the demo database
+        env:
+          DEMO_DATABASE_URL: ${{ secrets.DEMO_DATABASE_URL }}
+        run: |
+          psql "$DEMO_DATABASE_URL" -v ON_ERROR_STOP=1 -q \
+            -c "TRUNCATE users, todos, sessions, rate_limits RESTART IDENTITY CASCADE"
+          echo "demo emptied"
