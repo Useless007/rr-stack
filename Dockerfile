@@ -1,5 +1,5 @@
 # The whole app in one image: React pages built by bun, the Rust server built in release mode.
-FROM oven/bun:1 AS web
+FROM oven/bun:1.4.5 AS web
 WORKDIR /src
 COPY openapi.json ./
 COPY web/package.json web/bun.lock web/

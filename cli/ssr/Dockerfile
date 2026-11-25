@@ -1,7 +1,7 @@
 # One image for both processes, the Rust server and the page renderer. By default it runs both
 # (web/start.ts), which is what one-container hosts such as Vercel need. compose.yml runs one
 # container of each instead: `/app/server` and `bun /app/web/server.ts`.
-FROM oven/bun:1 AS web
+FROM oven/bun:1.4.5 AS web
 WORKDIR /src
 COPY openapi.json ./
 COPY web/package.json web/bun.lock web/
@@ -19,7 +19,7 @@ COPY server ./
 ENV SQLX_OFFLINE=true
 RUN cargo build --release --locked --bin server
 
-FROM oven/bun:1-slim
+FROM oven/bun:1.4.5-slim
 COPY --from=server /src/server/target/release/server /app/server
 COPY --from=web /src/web/build /app/web/build
 COPY --from=web /src/web/node_modules /app/web/node_modules

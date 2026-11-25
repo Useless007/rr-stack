@@ -4,7 +4,7 @@ import { $ } from "bun";
 import { existsSync } from "node:fs";
 import { createServer } from "node:net";
 import { join } from "node:path";
-import { bun, exe, fail, onExit, run, serverDir, webDir } from "./lib";
+import { bun, fail, onExit, run, serverDir, webDir } from "./lib";
 
 const freePort = () =>
   new Promise<number>((resolve) => {
@@ -16,10 +16,23 @@ const freePort = () =>
 
 export type App = { base: string; port: number; ssr: boolean; stop: () => void };
 
+/**
+ * The server executable cargo just built, from its JSON messages. Cargo knows where it put it: under
+ * server/target, or wherever CARGO_TARGET_DIR or a .cargo/config.toml sends builds.
+ */
+export function serverBinary(cargoJson: string): string {
+  for (const line of cargoJson.split("\n")) {
+    if (!line.startsWith("{")) continue;
+    const message = JSON.parse(line) as { reason?: string; target?: { name?: string }; executable?: string | null };
+    if (message.reason === "compiler-artifact" && message.target?.name === "server" && message.executable) return message.executable;
+  }
+  return fail("cargo build reported no server executable");
+}
+
 export async function startApp(): Promise<App> {
   if (!process.env.DATABASE_URL) fail("DATABASE_URL is not set (copy .env.example to .env)");
   await run($`${bun} run build`.cwd(webDir), true);
-  await run($`cargo build -q --bin server`.cwd(serverDir), true);
+  const binary = serverBinary(await run($`cargo build -q --bin server --message-format=json`.cwd(serverDir), true));
 
   const port = await freePort();
   const base = `http://127.0.0.1:${port}`;
@@ -43,7 +56,7 @@ export async function startApp(): Promise<App> {
     });
     env.WEB_SSR_URL = `http://127.0.0.1:${webPort}`;
   }
-  const server = Bun.spawn([join(serverDir, "target", "debug", `server${exe}`)], { env, stdout: "ignore", stderr: "pipe" });
+  const server = Bun.spawn([binary], { env, stdout: "ignore", stderr: "pipe" });
   const stop = () => {
     server.kill();
     renderer?.kill();

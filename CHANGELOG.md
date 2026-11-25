@@ -3,6 +3,30 @@
 Versions are the `create-rr-stack` package on npm. A version changes what new projects start
 with; existing projects are not updated.
 
+## Unreleased
+
+Found while moving a production app (Clima) onto RR stack.
+
+- `bun run gen` works on a database that has no tables yet. With `DATABASE_URL` set, the `query!`
+  macros check their SQL against that database while the OpenAPI binary compiles, so a new database
+  or fresh container failed with dozens of `relation "..." does not exist` errors. `gen` now runs
+  the migrations first, as `bun run check` already did.
+- `bun run smoke` and `bun run e2e` find the server binary wherever cargo built it. They used to
+  look only in `server/target/debug/`, so `CARGO_TARGET_DIR` (a shared build folder, sccache) or a
+  `.cargo/config.toml` made them fail with `ENOENT`. The path now comes from cargo's own build
+  output.
+- e2e: a test that failed only with `net::ERR_NETWORK_CHANGED` runs once more. Chromium aborts every
+  request in flight when a network interface comes or goes, which Docker does whenever it starts or
+  stops a container network, so a test could fail for something that says nothing about the app.
+  Any other error, even beside it, still fails at once.
+- One Bun version everywhere. `package.json` pins it (`"packageManager": "bun@1.4.5"`), CI reads it
+  from there, the Docker images name the same tag, and `bun run check` fails if they disagree.
+  Before, CI took the latest Bun and the images took any `1.x`, so a new Bun release could change
+  every build at once with nobody changing a line.
+- CI runs on pushes to branches and on pull requests, but not on tag pushes: a release tag points at
+  a commit its branch push already checked, so every release ran the whole matrix twice. A new push
+  to a branch or PR cancels its older run; runs on `main` are never cancelled.
+
 ## 0.7.1 (2026-11-22)
 
 - Signed out, moving between pages no longer makes the header's "Sign in" link vanish for a moment.

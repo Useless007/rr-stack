@@ -1,7 +1,16 @@
 name: ci
 on:
+  # Every branch, but not tags: a release tag points at a commit its branch push already checked.
   push:
+    branches: ["**"]
   pull_request:
+
+# A new push to a branch or PR cancels its older run, which checks a commit nobody will merge. Runs on
+# main are never cancelled, so every commit there keeps a result. The event is in the group, so a
+# branch's push run and its PR run do not cancel each other.
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   check:
@@ -16,6 +25,8 @@ jobs:
         with:
           components: clippy, rustfmt
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: server
@@ -142,6 +153,8 @@ jobs:
       # Only in the rr-stack template repo; a project made from it skips this job's steps.
       - if: hashFiles('cli/package.json') != ''
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
       - if: hashFiles('cli/package.json') != ''
         run: bun install --frozen-lockfile
         working-directory: cli

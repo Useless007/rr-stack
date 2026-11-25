@@ -4,6 +4,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, type BrowserContext, type Page } from "playwright-core";
+import { onlyNetworkChanged } from "../app/lib/flaky-network";
 
 const base = process.env.E2E_BASE_URL;
 if (!base) throw new Error("E2E_BASE_URL is not set. Run the tests with `bun run e2e` at the project root.");
@@ -40,8 +41,21 @@ async function watch(context: BrowserContext): Promise<{ page: Page; errors: str
 /**
  * Runs `test` with fresh browser pages (separate contexts: separate cookies, like separate people).
  * Fails on any error the pages raised, and saves a screenshot of each page when anything fails.
+ * A run that failed only because this machine's network changed (see onlyNetworkChanged) is run once
+ * more, in a new browser.
  */
 export async function withPages(name: string, count: number, test: (pages: Page[], url: (path: string) => string) => Promise<void>) {
+  try {
+    await attempt(name, count, test);
+  } catch (err) {
+    const { message, pageErrors } = (err as { network?: { message: string; pageErrors: string[] } }).network ?? { message: "", pageErrors: [] };
+    if (!onlyNetworkChanged(message, pageErrors)) throw err;
+    console.warn(`${name}: the network changed during the test (net::ERR_NETWORK_CHANGED); running it once more`);
+    await attempt(name, count, test);
+  }
+}
+
+async function attempt(name: string, count: number, test: (pages: Page[], url: (path: string) => string) => Promise<void>) {
   // One browser per test: bun runs every test file in one process, so a shared one would be closed by
   // the first file to finish.
   const browser = await chromium.launch();
@@ -64,7 +78,10 @@ export async function withPages(name: string, count: number, test: (pages: Page[
     const errors = watched.flatMap((w) => w.errors);
     const already = err instanceof Error && err.message.startsWith("the page reported errors");
     const seen = errors.length && !already ? `\nThe page also reported:\n  ${errors.join("\n  ")}` : "";
-    throw new Error(`${err instanceof Error ? err.message : err}${seen}\nScreenshots:\n  ${shots.join("\n  ")}`, { cause: err });
+    const failure = new Error(`${err instanceof Error ? err.message : err}${seen}\nScreenshots:\n  ${shots.join("\n  ")}`, { cause: err });
+    // What withPages needs to tell a network change from a real failure.
+    Object.assign(failure, { network: { message: err instanceof Error ? err.message : String(err), pageErrors: errors } });
+    throw failure;
   } finally {
     await browser.close();
   }

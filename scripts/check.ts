@@ -13,6 +13,21 @@ need("cargo", "https://rustup.rs");
 const skipDb = process.env.SKIP_DB === "1";
 if (!skipDb && !(await hasSqlx())) fail("sqlx-cli is not installed. Install it with: cargo install sqlx-cli --no-default-features --features postgres,rustls");
 
+step("bun version: package.json's packageManager and every Dockerfile's oven/bun image agree");
+{
+  // CI reads packageManager (setup-bun's bun-version-file); the Docker images name their own tag.
+  // Bump all of them together, or CI and the deployed image build with different bun versions.
+  const pinned = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).packageManager?.match(/^bun@(.+)$/)?.[1];
+  if (!pinned) fail('package.json needs "packageManager": "bun@<version>"');
+  const dockerfiles = [join(root, "Dockerfile"), join(root, "cli/ssr/Dockerfile")].filter((f) => existsSync(f));
+  const off = dockerfiles.flatMap((file) =>
+    [...readFileSync(file, "utf8").matchAll(/^FROM oven\/bun:([^\s-]+)/gm)]
+      .filter((m) => m[1] !== pinned)
+      .map((m) => `${file.slice(root.length + 1)}: oven/bun:${m[1]}`),
+  );
+  if (off.length) fail(`package.json pins bun ${pinned}, but:\n  ${off.join("\n  ")}`);
+}
+
 step("rustfmt");
 await run($`cargo fmt --check`.cwd(serverDir));
 step("clippy (offline SQL metadata from .sqlx/)");

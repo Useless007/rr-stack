@@ -2,6 +2,7 @@
   "name": "rr-stack",
   "private": true,
   "type": "module",
+  "packageManager": "bun@1.4.5",
   "scripts": {
     "dev": "bun scripts/dev.ts",
     "check": "bun scripts/check.ts",
