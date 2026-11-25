@@ -3,7 +3,7 @@
 Versions are the `create-rr-stack` package on npm. A version changes what new projects start
 with; existing projects are not updated.
 
-## Unreleased
+## 0.7.2 (2026-11-26)
 
 Found while moving a production app (Clima) onto RR stack.
 
