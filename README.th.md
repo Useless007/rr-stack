@@ -115,7 +115,7 @@ bun run dev              # Postgres ใน Docker + Rust API + Vite พร้อ
 สิ่งที่ต้องมี: Docker ถ้าจะพัฒนาต้องมี Rust (stable), [bun](https://bun.sh) 1.4+, git และ
 `cargo install sqlx-cli --no-default-features --features postgres,rustls` เพิ่ม
 
-จะย้ายแอปที่ใช้งานจริงอยู่แล้วมาเป็น RR stack? [docs/migrate-an-existing-app.md](docs/migrate-an-existing-app.md)
+จะย้ายแอปที่ใช้งานจริงอยู่แล้วมาเป็น RR stack? [docs/migrate-an-existing-app.md](https://github.com/Useless007/rr-stack/blob/main/docs/migrate-an-existing-app.md)
 อธิบายการย้ายแบบเปลี่ยนครั้งเดียวที่ผู้ใช้ไม่ต้อง login ใหม่และข้อมูลไม่หาย พร้อมวิธีซ้อมก่อนย้ายจริง
 
 ## repo นี้
