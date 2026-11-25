@@ -118,6 +118,9 @@ WebSocket によるリアルタイム更新・型付き 401/403/404/422 エラ�
 必要なもの：Docker。開発する場合は Rust（stable）、[bun](https://bun.sh) 1.4+、git、
 `cargo install sqlx-cli --no-default-features --features postgres,rustls` も必要です。
 
+本番で動いているアプリを RR stack に移しますか？ [docs/migrate-an-existing-app.md](https://github.com/Useless007/rr-stack/blob/main/docs/migrate-an-existing-app.md)
+に、ユーザーの再ログインもデータの欠落もなく一度で切り替える手順と、その事前リハーサルの方法があります（英語）。
+
 ## このリポジトリについて
 
 このリポジトリは 2 つの役割を兼ねています。

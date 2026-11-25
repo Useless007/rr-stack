@@ -109,6 +109,9 @@ bun run dev              # Docker 中的 Postgres + Rust API + Vite，支持热�
 环境要求：Docker。开发还需要 Rust（stable）、[bun](https://bun.sh) 1.4+、git，以及
 `cargo install sqlx-cli --no-default-features --features postgres,rustls`。
 
+要把已经在线上运行的应用迁移到 RR stack？[docs/migrate-an-existing-app.md](https://github.com/Useless007/rr-stack/blob/main/docs/migrate-an-existing-app.md)
+介绍了一次切换、用户无需重新登录、数据不丢失的做法，以及如何先演练（英文）。
+
 ## 关于这个仓库
 
 这个仓库同时是两样东西：
