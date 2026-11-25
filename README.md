@@ -117,6 +117,9 @@ live updates over a WebSocket and typed 401/403/404/422 errors. Read its `README
 Requirements: Docker. To develop, also Rust (stable), [bun](https://bun.sh) 1.4+, git and
 `cargo install sqlx-cli --no-default-features --features postgres,rustls`.
 
+Moving an app that already runs in production? [docs/migrate-an-existing-app.md](docs/migrate-an-existing-app.md)
+covers a one-cutover move that keeps sessions, passwords and data, and how to rehearse it.
+
 ## This repository
 
 This repo is two things at once:
